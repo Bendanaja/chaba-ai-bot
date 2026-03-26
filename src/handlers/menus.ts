@@ -115,7 +115,7 @@ export function buildMainMenu(): messagingApi.FlexMessage {
         spacing: "sm",
         contents: [
           footerBtn("💰 กระเป๋าเงิน", "wallet"),
-          footerBtn("📋 ราคาทั้งหมด", "price"),
+          footerBtn("📋 ดูราคา", "price"),
         ],
         paddingAll: "12px",
         backgroundColor: "#F0E6FF",
