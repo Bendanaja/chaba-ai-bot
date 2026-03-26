@@ -3,6 +3,9 @@ import type { webhook } from "@line/bot-sdk";
 import { handleTextMessage } from "../handlers/text-message.js";
 import { handleImageMessage } from "../handlers/image-message.js";
 import { handlePostback } from "../handlers/postback.js";
+import { pushMessage } from "../services/line.js";
+import { buildMainMenu } from "../handlers/menus.js";
+import * as dbService from "../services/database.js";
 
 async function handleEvent(event: webhook.Event): Promise<void> {
   switch (event.type) {
@@ -17,6 +20,15 @@ async function handleEvent(event: webhook.Event): Promise<void> {
     }
     case "postback": {
       await handlePostback(event);
+      break;
+    }
+    case "follow": {
+      // New friend added — send welcome menu
+      const userId = event.source?.userId;
+      if (userId) {
+        dbService.getOrCreateUser(userId);
+        await pushMessage(userId, buildMainMenu());
+      }
       break;
     }
     default:

@@ -15,6 +15,7 @@ import {
   getCurrentStepMessage,
   type Session,
 } from "./session.js";
+import { buildMainMenu } from "./menus.js";
 
 // Pending commands: user typed /removebg, /upscale, etc. waiting for image
 const pendingCommands = new Map<
@@ -59,6 +60,14 @@ export async function handleTextMessage(
     }
   }
 
+  // ==================== Show Menu on Greeting ====================
+  const greetings = ["เมนู", "menu", "สวัสดี", "hi", "hello", "start"];
+  if (greetings.includes(text.toLowerCase())) {
+    clearSession(userId);
+    await replyMessage(replyToken, buildMainMenu());
+    return;
+  }
+
   // ==================== Active Session ====================
   const session = getSession(userId);
   if (session) {
@@ -74,6 +83,12 @@ export async function handleTextMessage(
     const restText = parts.slice(1).join(" ");
 
     switch (cmd) {
+      case "/menu":
+      case "/start": {
+        await replyMessage(replyToken, buildMainMenu());
+        return;
+      }
+
       case "/myid": {
         await replyText(replyToken, `Your User ID:\n${userId}`);
         return;
