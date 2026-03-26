@@ -80,8 +80,8 @@ export function buildMainMenu(): messagingApi.FlexMessage {
             layout: "horizontal",
             spacing: "sm",
             contents: [
-              mainCatCard("🖼", "รูปภาพ", "3-8 ฿", "image", "#D63384", "#FF6B9D"),
-              mainCatCard("🎬", "วิดีโอ", "15-22 ฿", "video", "#E17055", "#FF9A76"),
+              mainCatCard("🖼", "รูปภาพ", "3-8 ฿", "image", "#B5246B", "#D63384"),
+              mainCatCard("🎬", "วิดีโอ", "15-22 ฿", "video", "#C0392B", "#E17055"),
             ],
           },
           {
@@ -89,8 +89,8 @@ export function buildMainMenu(): messagingApi.FlexMessage {
             layout: "horizontal",
             spacing: "sm",
             contents: [
-              mainCatCard("🎤", "เสียงพูด", "4-5 ฿", "audio", "#0984E3", "#48C6EF"),
-              mainCatCard("🎵", "เพลง", "10 ฿", "music", "#6C5CE7", "#A78BFA"),
+              mainCatCard("🎤", "เสียงพูด", "4-5 ฿", "audio", "#0652DD", "#0984E3"),
+              mainCatCard("🎵", "เพลง", "10 ฿", "music", "#4834D4", "#6C5CE7"),
             ],
           },
 
@@ -135,8 +135,8 @@ function mainCatCard(emoji: string, label: string, price: string, cat: string, c
     flex: 1,
     contents: [
       { type: "text", text: emoji, size: "xxl", align: "center" },
-      { type: "text", text: label, weight: "bold", size: "md", align: "center", color: C.white, margin: "sm" },
-      { type: "text", text: price, size: "xs", align: "center", color: "#FFFFFFAA" },
+      { type: "text", text: label, weight: "bold", size: "lg", align: "center", color: C.white, margin: "sm" },
+      { type: "text", text: price, size: "sm", align: "center", color: "#FFFFFFDD" },
     ],
     paddingAll: "14px",
     cornerRadius: "12px",
@@ -205,10 +205,10 @@ function footerBtn(label: string, cmd: string): messagingApi.FlexButton {
 
 export function buildCategoryMenu(category: "image" | "video" | "audio" | "music"): messagingApi.FlexMessage {
   const info: Record<string, { label: string; emoji: string; s: string; e: string }> = {
-    image: { label: "รูปภาพ", emoji: "🖼", s: "#D63384", e: "#FF6B9D" },
-    video: { label: "วิดีโอ", emoji: "🎬", s: "#E17055", e: "#FF9A76" },
-    audio: { label: "เสียง", emoji: "🎤", s: "#0984E3", e: "#48C6EF" },
-    music: { label: "เพลง", emoji: "🎵", s: "#6C5CE7", e: "#A78BFA" },
+    image: { label: "รูปภาพ", emoji: "🖼", s: "#B5246B", e: "#D63384" },
+    video: { label: "วิดีโอ", emoji: "🎬", s: "#C0392B", e: "#E17055" },
+    audio: { label: "เสียง", emoji: "🎤", s: "#0652DD", e: "#0984E3" },
+    music: { label: "เพลง", emoji: "🎵", s: "#4834D4", e: "#6C5CE7" },
   };
 
   const { label, emoji, s, e } = info[category]!;
@@ -391,10 +391,10 @@ export function buildWalletMenu(balance: number): messagingApi.FlexMessage {
 
 export function buildPriceMenu(): messagingApi.FlexMessage {
   const cats = [
-    { key: "image" as const, label: "🖼 รูปภาพ", s: "#D63384", e: "#FF6B9D" },
-    { key: "video" as const, label: "🎬 วิดีโอ", s: "#E17055", e: "#FF9A76" },
-    { key: "audio" as const, label: "🎤 เสียง", s: "#0984E3", e: "#48C6EF" },
-    { key: "music" as const, label: "🎵 เพลง", s: "#6C5CE7", e: "#A78BFA" },
+    { key: "image" as const, label: "🖼 รูปภาพ", s: "#B5246B", e: "#D63384" },
+    { key: "video" as const, label: "🎬 วิดีโอ", s: "#C0392B", e: "#E17055" },
+    { key: "audio" as const, label: "🎤 เสียง", s: "#0652DD", e: "#0984E3" },
+    { key: "music" as const, label: "🎵 เพลง", s: "#4834D4", e: "#6C5CE7" },
   ];
 
   const bubbles: messagingApi.FlexBubble[] = cats.map(({ key, label, s, e }) => {
