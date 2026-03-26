@@ -31,6 +31,12 @@ export async function kieaiCallbackHandler(
       return;
     }
 
+    // Skip if already processed (prevent double-callback)
+    if (task.status === "success" || task.status === "failed") {
+      console.log("Task already processed:", taskId, task.status);
+      return;
+    }
+
     const code = body.code ?? body.data?.code;
     const isSuccess = code === 200;
 
@@ -64,50 +70,56 @@ export async function kieaiCallbackHandler(
       // GPT-4o callback: data.info.result_urls
       resultUrls = body.data?.info?.result_urls || [];
     } else if (task.api_type === "suno") {
-      // Suno music: poll for sunoData array
-      try {
-        const sunoStatus = await kieai.getSunoTaskStatus(taskId);
-        const sunoData = sunoStatus?.response?.sunoData;
-        if (sunoData && sunoData.length > 0) {
-          for (const track of sunoData) {
-            if (track.audioUrl) {
-              resultUrls.push(track.audioUrl);
-              audioDuration = Math.max(audioDuration, (track.duration || 0) * 1000);
+      // Suno music: poll for sunoData array (retry up to 3 times with delay)
+      for (let attempt = 0; attempt < 3 && resultUrls.length === 0; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 5000));
+        try {
+          const sunoStatus = await kieai.getSunoTaskStatus(taskId);
+          console.log("Suno status attempt", attempt + 1, JSON.stringify(sunoStatus));
+          const sunoData = sunoStatus?.response?.sunoData;
+          if (sunoData && sunoData.length > 0) {
+            for (const track of sunoData) {
+              if (track.audioUrl) {
+                resultUrls.push(track.audioUrl);
+                audioDuration = Math.max(audioDuration, (track.duration || 0) * 1000);
+              }
             }
           }
+        } catch (err) {
+          console.error("Suno status poll error (attempt " + (attempt + 1) + "):", err);
         }
-      } catch (err) {
-        console.error("Suno status poll error:", err);
       }
     } else if (task.api_type === "market") {
-      // Market API callback doesn't include URLs directly
-      // Need to poll for the actual result
-      const status = await kieai.getMarketTaskStatus(taskId);
-      if (status?.state === "success" && status.resultJson) {
+      // Market API: poll for result (retry up to 3 times with delay)
+      for (let attempt = 0; attempt < 3 && resultUrls.length === 0; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 3000));
         try {
-          const result = JSON.parse(status.resultJson);
-          resultUrls =
-            result.resultUrls ||
-            result.resultImageUrls ||
-            (result.resultUrl ? [result.resultUrl] : []);
+          const status = await kieai.getMarketTaskStatus(taskId);
+          console.log("Market status attempt", attempt + 1, "state:", status?.state);
+          if (status?.state === "success" && status.resultJson) {
+            const result = JSON.parse(status.resultJson);
+            resultUrls =
+              result.resultUrls ||
+              result.resultImageUrls ||
+              (result.resultUrl ? [result.resultUrl] : []);
 
-          // Some models return different field names
-          if (resultUrls.length === 0) {
-            // Try to find any URL-like value in the result
-            for (const val of Object.values(result)) {
-              if (typeof val === "string" && val.startsWith("http")) {
-                resultUrls.push(val);
-              } else if (Array.isArray(val)) {
-                for (const item of val) {
-                  if (typeof item === "string" && item.startsWith("http")) {
-                    resultUrls.push(item);
+            // Some models return different field names
+            if (resultUrls.length === 0) {
+              for (const val of Object.values(result)) {
+                if (typeof val === "string" && val.startsWith("http")) {
+                  resultUrls.push(val);
+                } else if (Array.isArray(val)) {
+                  for (const item of val) {
+                    if (typeof item === "string" && item.startsWith("http")) {
+                      resultUrls.push(item);
+                    }
                   }
                 }
               }
             }
           }
-        } catch {
-          console.error("Failed to parse resultJson:", status.resultJson);
+        } catch (err) {
+          console.error("Market status poll error (attempt " + (attempt + 1) + "):", err);
         }
       }
     }
