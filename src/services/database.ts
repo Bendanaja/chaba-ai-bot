@@ -1,9 +1,11 @@
 import Database, { type Database as DatabaseType } from "better-sqlite3";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env["DB_PATH"] || path.join(__dirname, "..", "..");
+fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = path.join(dataDir, "chaba.db");
 
 const db: DatabaseType = new Database(dbPath);

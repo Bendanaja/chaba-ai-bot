@@ -12,6 +12,8 @@ COPY src ./src
 
 RUN npx tsc
 
+RUN mkdir -p /app/data
+
 EXPOSE 3000
 
 CMD ["node", "dist/index.js"]
