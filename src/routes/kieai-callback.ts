@@ -58,10 +58,27 @@ export async function kieaiCallbackHandler(
 
     // Extract result URLs based on API type
     let resultUrls: string[] = [];
+    let audioDuration = 0;
 
     if (task.api_type === "gpt4o") {
       // GPT-4o callback: data.info.result_urls
       resultUrls = body.data?.info?.result_urls || [];
+    } else if (task.api_type === "suno") {
+      // Suno music: poll for sunoData array
+      try {
+        const sunoStatus = await kieai.getSunoTaskStatus(taskId);
+        const sunoData = sunoStatus?.response?.sunoData;
+        if (sunoData && sunoData.length > 0) {
+          for (const track of sunoData) {
+            if (track.audioUrl) {
+              resultUrls.push(track.audioUrl);
+              audioDuration = Math.max(audioDuration, (track.duration || 0) * 1000);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Suno status poll error:", err);
+      }
     } else if (task.api_type === "market") {
       // Market API callback doesn't include URLs directly
       // Need to poll for the actual result
@@ -124,10 +141,17 @@ export async function kieaiCallbackHandler(
     for (const url of resultUrls) {
       // Determine content type from URL or model type
       if (url.match(/\.(mp4|mov|webm)(\?|$)/i) || modelType === "text-to-video" || modelType === "image-to-video") {
-        // LINE requires JPEG preview for video — send as text link instead
-        await pushText(task.user_id, `Video: ${url}`);
+        await pushText(task.user_id, `🎬 Video: ${url}`);
       } else if (url.match(/\.(mp3|wav|ogg|m4a)(\?|$)/i) || modelType === "text-to-audio" || modelType === "text-to-music") {
-        await pushText(task.user_id, `Audio: ${url}`);
+        if (audioDuration > 0) {
+          try {
+            await pushAudio(task.user_id, url, audioDuration);
+          } catch {
+            await pushText(task.user_id, `🎵 Audio: ${url}`);
+          }
+        } else {
+          await pushText(task.user_id, `🎵 Audio: ${url}`);
+        }
       } else {
         await pushImage(task.user_id, url);
       }

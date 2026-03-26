@@ -9,6 +9,8 @@ services:
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
       - KIEAI_API_KEY=${KIEAI_API_KEY}
       - KIEAI_CALLBACK_BASE_URL=${KIEAI_CALLBACK_BASE_URL}
+      - ADMIN_USER_IDS=${ADMIN_USER_IDS}
+      - DB_PATH=/app/data
       - PORT=3000
     volumes:
       - chaba-data:/app/data

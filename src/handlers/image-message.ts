@@ -39,8 +39,15 @@ export async function handleImageMessage(
       modelId = "flux-2/pro-image-to-image";
     }
   } else {
-    // Default: image-to-image with generic prompt
-    modelId = "flux-2/pro-image-to-image";
+    // Check if user's selected model supports images
+    const selected = dbService.getSelectedModel(userId);
+    const selectedModel = getModelById(selected);
+    if (selectedModel?.requiresImage) {
+      modelId = selected;
+    } else {
+      // Default: image-to-image with generic prompt
+      modelId = "flux-2/pro-image-to-image";
+    }
     prompt = "Enhance this image";
   }
 
@@ -102,6 +109,13 @@ export async function handleImageMessage(
         input = {
           input_urls: [uploadedUrl],
           prompt: prompt || "Enhance this image",
+          ...model.defaultParams,
+        };
+        break;
+      case "image-to-video":
+        input = {
+          image: uploadedUrl,
+          prompt: prompt || "Animate this image",
           ...model.defaultParams,
         };
         break;
