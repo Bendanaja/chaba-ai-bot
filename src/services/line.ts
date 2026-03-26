@@ -41,6 +41,39 @@ export async function pushText(userId: string, text: string): Promise<void> {
   }
 }
 
+export async function replyMessage(
+  replyToken: string,
+  message: messagingApi.Message
+): Promise<void> {
+  try {
+    await lineClient.replyMessage({
+      replyToken,
+      messages: [message],
+    });
+  } catch (err) {
+    if (err instanceof HTTPFetchError) {
+      console.error("LINE reply message error:", err.status, err.body);
+    }
+    throw err;
+  }
+}
+
+export async function pushMessage(
+  userId: string,
+  message: messagingApi.Message
+): Promise<void> {
+  try {
+    await lineClient.pushMessage({
+      to: userId,
+      messages: [message],
+    });
+  } catch (err) {
+    if (err instanceof HTTPFetchError) {
+      console.error("LINE push message error:", err.status, err.body);
+    }
+  }
+}
+
 export async function pushImage(
   userId: string,
   imageUrl: string
