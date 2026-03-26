@@ -1,11 +1,17 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import { middleware } from "@line/bot-sdk";
 import { config } from "./config.js";
 import { lineWebhookHandler } from "./routes/line-webhook.js";
 import { kieaiCallbackHandler } from "./routes/kieai-callback.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+
+// Static files (mascot image etc.)
+app.use("/public", express.static(path.join(__dirname, "..", "public")));
 
 // LINE webhook — uses LINE SDK middleware for signature verification
 app.post(

@@ -6,6 +6,7 @@ import {
   buildMainMenu,
   buildCategoryMenu,
   buildWalletMenu,
+  buildPriceMenu,
 } from "./menus.js";
 import {
   startSession,
@@ -65,13 +66,7 @@ export async function handlePostback(event: webhook.PostbackEvent): Promise<void
       }
 
       if (cmd === "price") {
-        const categories = ["image", "video", "audio", "music"] as const;
-        const sections = categories.map((c) => {
-          const catModels = getModelsByCategory(c);
-          const lines = catModels.map((m) => `  ${m.labelTh}: ${m.creditCost} THB`);
-          return `[${c.toUpperCase()}]\n${lines.join("\n")}`;
-        });
-        await replyText(replyToken, `ราคา:\n\n${sections.join("\n\n")}`);
+        await replyMessage(replyToken, buildPriceMenu());
         return;
       }
 
