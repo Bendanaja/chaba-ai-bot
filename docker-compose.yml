@@ -1,0 +1,18 @@
+services:
+  chaba-bot:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - LINE_CHANNEL_ID=${LINE_CHANNEL_ID}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
+      - KIEAI_API_KEY=${KIEAI_API_KEY}
+      - KIEAI_CALLBACK_BASE_URL=${KIEAI_CALLBACK_BASE_URL}
+      - PORT=3000
+    volumes:
+      - chaba-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  chaba-data:
