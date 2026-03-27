@@ -26,7 +26,7 @@ async function handleEvent(event: webhook.Event): Promise<void> {
       // New friend added — send welcome menu
       const userId = event.source?.userId;
       if (userId) {
-        dbService.getOrCreateUser(userId);
+        await dbService.getOrCreateUser(userId);
         await pushMessage(userId, buildMainMenu());
       }
       break;

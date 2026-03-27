@@ -48,7 +48,7 @@ export async function handleTextMessage(
   const text = event.message.text.trim();
   const replyToken = event.replyToken!;
 
-  dbService.getOrCreateUser(userId);
+  await dbService.getOrCreateUser(userId);
 
   // ==================== Cancel ====================
   if (text === "/cancel" || text === "ยกเลิก") {
@@ -96,7 +96,7 @@ export async function handleTextMessage(
 
       case "/balance":
       case "/wallet": {
-        const balance = dbService.getBalance(userId);
+        const balance = await dbService.getBalance(userId);
         await replyText(replyToken, `Wallet: ${balance.toFixed(2)} THB`);
         return;
       }
@@ -116,8 +116,8 @@ export async function handleTextMessage(
           return;
         }
         const targetUserId = parts[2] || userId;
-        dbService.getOrCreateUser(targetUserId);
-        const newBalance = dbService.topUp(targetUserId, amount);
+        await dbService.getOrCreateUser(targetUserId);
+        const newBalance = await dbService.topUp(targetUserId, amount);
         await replyText(
           replyToken,
           `Top up +${amount} THB\nUser: ${targetUserId === userId ? "you" : targetUserId}\nBalance: ${newBalance.toFixed(2)} THB`
@@ -126,7 +126,7 @@ export async function handleTextMessage(
       }
 
       case "/history": {
-        const txns = dbService.getTransactions(userId, 10);
+        const txns = await dbService.getTransactions(userId, 10);
         if (txns.length === 0) {
           await replyText(replyToken, "No transactions yet.");
           return;
@@ -153,7 +153,7 @@ export async function handleTextMessage(
             );
             return;
           }
-          dbService.setSelectedModel(userId, model.id);
+          await dbService.setSelectedModel(userId, model.id);
           await replyText(
             replyToken,
             `Model: ${model.label} (${model.creditCost} THB/gen)`
@@ -161,7 +161,7 @@ export async function handleTextMessage(
           return;
         }
 
-        const current = dbService.getSelectedModel(userId);
+        const current = await dbService.getSelectedModel(userId);
         const currentModel = getModelById(current);
         const available = models
           .map(
@@ -325,7 +325,7 @@ export async function handleTextMessage(
 
   // ==================== Default: Text-to-Image (Interactive) ====================
 
-  const modelId = dbService.getSelectedModel(userId);
+  const modelId = await dbService.getSelectedModel(userId);
   const model = getModelById(modelId) || models[0]!;
 
   if (model.requiresImage) {
@@ -450,7 +450,7 @@ export async function executeGeneration(
   prompt: string,
   extraInput: Record<string, unknown>
 ): Promise<void> {
-  const balance = dbService.getBalance(userId);
+  const balance = await dbService.getBalance(userId);
   if (balance < model.creditCost) {
     await replyText(
       replyToken,
@@ -459,7 +459,7 @@ export async function executeGeneration(
     return;
   }
 
-  const spent = dbService.spend(
+  const spent = await dbService.spend(
     userId,
     model.creditCost,
     `${model.label}: ${prompt.slice(0, 50)}`
@@ -478,10 +478,10 @@ export async function executeGeneration(
   try {
     const input = { prompt, ...extraInput };
     const { taskId, apiType } = await kieai.createTask(model.id, input);
-    dbService.saveTask(taskId, userId, model.id, apiType, prompt);
+    await dbService.saveTask(taskId, userId, model.id, apiType, prompt);
   } catch (err) {
     console.error("Create task error:", err);
-    dbService.refund(userId, model.creditCost, `Refund: task creation failed`);
+    await dbService.refund(userId, model.creditCost, `Refund: task creation failed`);
     await pushText(
       userId,
       `สร้างไม่สำเร็จ คืนเงิน ${model.creditCost} THB`

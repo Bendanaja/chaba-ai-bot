@@ -10,11 +10,7 @@ services:
       - KIEAI_API_KEY=${KIEAI_API_KEY}
       - KIEAI_CALLBACK_BASE_URL=${KIEAI_CALLBACK_BASE_URL}
       - ADMIN_USER_IDS=${ADMIN_USER_IDS}
-      - DB_PATH=/app/data
+      - SUPABASE_URL=http://supabase-rest:3000
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - PORT=3000
-    volumes:
-      - chaba-data:/app/data
     restart: unless-stopped
-
-volumes:
-  chaba-data:

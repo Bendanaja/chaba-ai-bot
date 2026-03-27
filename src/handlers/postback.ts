@@ -25,7 +25,7 @@ export async function handlePostback(event: webhook.PostbackEvent): Promise<void
   const action = params.get("action");
   const replyToken = event.replyToken!;
 
-  dbService.getOrCreateUser(userId);
+  await dbService.getOrCreateUser(userId);
 
   switch (action) {
     // ==================== Menu Navigation ====================
@@ -46,13 +46,13 @@ export async function handlePostback(event: webhook.PostbackEvent): Promise<void
       }
 
       if (cmd === "wallet") {
-        const balance = dbService.getBalance(userId);
+        const balance = await dbService.getBalance(userId);
         await replyMessage(replyToken, buildWalletMenu(balance));
         return;
       }
 
       if (cmd === "history") {
-        const txns = dbService.getTransactions(userId, 10);
+        const txns = await dbService.getTransactions(userId, 10);
         if (txns.length === 0) {
           await replyText(replyToken, "ยังไม่มีประวัติ");
           return;
@@ -112,7 +112,7 @@ export async function handlePostback(event: webhook.PostbackEvent): Promise<void
       }
 
       // Save as selected model
-      dbService.setSelectedModel(userId, modelId);
+      await dbService.setSelectedModel(userId, modelId);
 
       // Determine command type from category
       let command: string;
@@ -183,7 +183,7 @@ export async function handlePostback(event: webhook.PostbackEvent): Promise<void
         await replyText(replyToken, "ไม่พบ Model");
         return;
       }
-      dbService.setSelectedModel(userId, model.id);
+      await dbService.setSelectedModel(userId, model.id);
       await replyText(
         replyToken,
         `Model: ${model.label}\nราคา: ${model.creditCost} THB/ครั้ง`
@@ -192,7 +192,7 @@ export async function handlePostback(event: webhook.PostbackEvent): Promise<void
     }
 
     case "check_balance": {
-      const balance = dbService.getBalance(userId);
+      const balance = await dbService.getBalance(userId);
       await replyMessage(replyToken, buildWalletMenu(balance));
       break;
     }

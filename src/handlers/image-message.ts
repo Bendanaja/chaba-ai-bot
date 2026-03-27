@@ -17,7 +17,7 @@ export async function handleImageMessage(
   const replyToken = event.replyToken!;
   const messageId = event.message.id;
 
-  dbService.getOrCreateUser(userId);
+  await dbService.getOrCreateUser(userId);
 
   // Determine what to do with the image
   const pending = getPendingCommand(userId);
@@ -31,7 +31,7 @@ export async function handleImageMessage(
   } else if (pending?.command === "upscale") {
     modelId = "topaz/image-upscale";
   } else if (pending?.command?.startsWith("prompt:")) {
-    modelId = dbService.getSelectedModel(userId);
+    modelId = await dbService.getSelectedModel(userId);
     prompt = pending.command.slice(7);
     // If selected model doesn't support images, use flux image-to-image
     const model = getModelById(modelId);
@@ -40,7 +40,7 @@ export async function handleImageMessage(
     }
   } else {
     // Check if user's selected model supports images
-    const selected = dbService.getSelectedModel(userId);
+    const selected = await dbService.getSelectedModel(userId);
     const selectedModel = getModelById(selected);
     if (selectedModel?.requiresImage) {
       modelId = selected;
@@ -58,7 +58,7 @@ export async function handleImageMessage(
   }
 
   // Check balance
-  const balance = dbService.getBalance(userId);
+  const balance = await dbService.getBalance(userId);
   if (balance < model.creditCost) {
     await replyText(
       replyToken,
@@ -68,7 +68,7 @@ export async function handleImageMessage(
   }
 
   // Deduct FIRST
-  const spent = dbService.spend(
+  const spent = await dbService.spend(
     userId,
     model.creditCost,
     `${model.label}: ${(prompt || "image").slice(0, 50)}`
@@ -125,11 +125,11 @@ export async function handleImageMessage(
     }
 
     const { taskId, apiType } = await kieai.createTask(model.id, input);
-    dbService.saveTask(taskId, userId, model.id, apiType, prompt);
+    await dbService.saveTask(taskId, userId, model.id, apiType, prompt);
   } catch (err) {
     console.error("Image task error:", err);
     // Refund on failure
-    dbService.refund(userId, model.creditCost, "Refund: image task failed");
+    await dbService.refund(userId, model.creditCost, "Refund: image task failed");
     await pushText(
       userId,
       `Processing failed. ${model.creditCost} THB refunded.`

@@ -1,51 +1,9 @@
-import Database, { type Database as DatabaseType } from "better-sqlite3";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
+import { createClient } from "@supabase/supabase-js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = process.env["DB_PATH"] || path.join(__dirname, "..", "..");
-fs.mkdirSync(dataDir, { recursive: true });
-const dbPath = path.join(dataDir, "chaba.db");
-
-const db: DatabaseType = new Database(dbPath);
-
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
-    display_name TEXT,
-    balance REAL DEFAULT 0,
-    selected_model TEXT DEFAULT 'flux-2/pro-text-to-image',
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT NOT NULL,
-    type TEXT NOT NULL CHECK(type IN ('topup', 'spend', 'refund')),
-    amount REAL NOT NULL,
-    description TEXT,
-    task_id TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS tasks (
-    task_id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    model TEXT NOT NULL,
-    api_type TEXT NOT NULL,
-    prompt TEXT,
-    status TEXT DEFAULT 'pending',
-    result_url TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-  );
-`);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export interface User {
   user_id: string;
@@ -68,135 +26,213 @@ export interface Transaction {
 
 // ==================== User ====================
 
-export function getOrCreateUser(userId: string, displayName?: string): User {
-  const existing = db
-    .prepare("SELECT * FROM users WHERE user_id = ?")
-    .get(userId) as User | undefined;
+export async function getOrCreateUser(
+  userId: string,
+  displayName?: string
+): Promise<User> {
+  const { data: existing } = await supabase
+    .from("users")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
 
-  if (existing) return existing;
+  if (existing) return existing as User;
 
-  db.prepare(
-    "INSERT INTO users (user_id, display_name) VALUES (?, ?)"
-  ).run(userId, displayName || null);
+  await supabase
+    .from("users")
+    .insert({ user_id: userId, display_name: displayName || null });
 
-  return db
-    .prepare("SELECT * FROM users WHERE user_id = ?")
-    .get(userId) as User;
+  const { data } = await supabase
+    .from("users")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+
+  return data as User;
 }
 
-export function getBalance(userId: string): number {
-  const user = db
-    .prepare("SELECT balance FROM users WHERE user_id = ?")
-    .get(userId) as { balance: number } | undefined;
-  return user?.balance ?? 0;
+export async function getBalance(userId: string): Promise<number> {
+  const { data } = await supabase
+    .from("users")
+    .select("balance")
+    .eq("user_id", userId)
+    .single();
+
+  return data?.balance ?? 0;
 }
 
-export function getSelectedModel(userId: string): string {
-  const user = db
-    .prepare("SELECT selected_model FROM users WHERE user_id = ?")
-    .get(userId) as { selected_model: string } | undefined;
-  return user?.selected_model ?? "flux-2/pro-text-to-image";
+export async function getSelectedModel(userId: string): Promise<string> {
+  const { data } = await supabase
+    .from("users")
+    .select("selected_model")
+    .eq("user_id", userId)
+    .single();
+
+  return data?.selected_model ?? "flux-2/pro-text-to-image";
 }
 
-export function setSelectedModel(userId: string, modelId: string): void {
-  db.prepare(
-    "UPDATE users SET selected_model = ?, updated_at = datetime('now') WHERE user_id = ?"
-  ).run(modelId, userId);
+export async function setSelectedModel(
+  userId: string,
+  modelId: string
+): Promise<void> {
+  await supabase
+    .from("users")
+    .update({ selected_model: modelId, updated_at: new Date().toISOString() })
+    .eq("user_id", userId);
 }
 
 // ==================== Wallet ====================
 
-export function topUp(userId: string, amount: number, description?: string): number {
-  const txn = db.transaction(() => {
-    db.prepare(
-      "UPDATE users SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?"
-    ).run(amount, userId);
+export async function topUp(
+  userId: string,
+  amount: number,
+  description?: string
+): Promise<number> {
+  // Get current balance
+  const { data: user } = await supabase
+    .from("users")
+    .select("balance")
+    .eq("user_id", userId)
+    .single();
 
-    db.prepare(
-      "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, 'topup', ?, ?)"
-    ).run(userId, amount, description || `Top up ${amount} THB`);
+  const newBalance = (user?.balance ?? 0) + amount;
 
-    return getBalance(userId);
+  await supabase
+    .from("users")
+    .update({ balance: newBalance, updated_at: new Date().toISOString() })
+    .eq("user_id", userId);
+
+  await supabase.from("transactions").insert({
+    user_id: userId,
+    type: "topup",
+    amount,
+    description: description || `Top up ${amount} THB`,
   });
-  return txn();
+
+  return newBalance;
 }
 
-export function spend(
+export async function spend(
   userId: string,
   amount: number,
   description: string,
   taskId?: string
-): boolean {
-  const txn = db.transaction(() => {
-    const balance = getBalance(userId);
-    if (balance < amount) return false;
+): Promise<boolean> {
+  const { data: user } = await supabase
+    .from("users")
+    .select("balance")
+    .eq("user_id", userId)
+    .single();
 
-    db.prepare(
-      "UPDATE users SET balance = balance - ?, updated_at = datetime('now') WHERE user_id = ?"
-    ).run(amount, userId);
+  const balance = user?.balance ?? 0;
+  if (balance < amount) return false;
 
-    db.prepare(
-      "INSERT INTO transactions (user_id, type, amount, description, task_id) VALUES (?, 'spend', ?, ?, ?)"
-    ).run(userId, amount, description, taskId || null);
+  const newBalance = balance - amount;
 
-    return true;
+  await supabase
+    .from("users")
+    .update({ balance: newBalance, updated_at: new Date().toISOString() })
+    .eq("user_id", userId);
+
+  await supabase.from("transactions").insert({
+    user_id: userId,
+    type: "spend",
+    amount,
+    description,
+    task_id: taskId || null,
   });
-  return txn();
+
+  return true;
 }
 
-export function refund(
+export async function refund(
   userId: string,
   amount: number,
   description: string,
   taskId?: string
-): void {
-  db.transaction(() => {
-    db.prepare(
-      "UPDATE users SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?"
-    ).run(amount, userId);
+): Promise<void> {
+  const { data: user } = await supabase
+    .from("users")
+    .select("balance")
+    .eq("user_id", userId)
+    .single();
 
-    db.prepare(
-      "INSERT INTO transactions (user_id, type, amount, description, task_id) VALUES (?, 'refund', ?, ?, ?)"
-    ).run(userId, amount, description, taskId || null);
-  })();
+  const newBalance = (user?.balance ?? 0) + amount;
+
+  await supabase
+    .from("users")
+    .update({ balance: newBalance, updated_at: new Date().toISOString() })
+    .eq("user_id", userId);
+
+  await supabase.from("transactions").insert({
+    user_id: userId,
+    type: "refund",
+    amount,
+    description,
+    task_id: taskId || null,
+  });
 }
 
-export function getTransactions(userId: string, limit = 10): Transaction[] {
-  return db
-    .prepare(
-      "SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?"
-    )
-    .all(userId, limit) as Transaction[];
+export async function getTransactions(
+  userId: string,
+  limit = 10
+): Promise<Transaction[]> {
+  const { data } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data || []) as Transaction[];
 }
 
 // ==================== Tasks ====================
 
-export function saveTask(
+export async function saveTask(
   taskId: string,
   userId: string,
   model: string,
   apiType: string,
   prompt?: string
-): void {
-  db.prepare(
-    "INSERT INTO tasks (task_id, user_id, model, api_type, prompt) VALUES (?, ?, ?, ?, ?)"
-  ).run(taskId, userId, model, apiType, prompt || null);
+): Promise<void> {
+  await supabase.from("tasks").insert({
+    task_id: taskId,
+    user_id: userId,
+    model,
+    api_type: apiType,
+    prompt: prompt || null,
+  });
 }
 
-export function getTask(taskId: string) {
-  return db.prepare("SELECT * FROM tasks WHERE task_id = ?").get(taskId) as
-    | { task_id: string; user_id: string; model: string; api_type: string; prompt: string | null; status: string; result_url: string | null }
-    | undefined;
+export async function getTask(taskId: string): Promise<
+  | {
+      task_id: string;
+      user_id: string;
+      model: string;
+      api_type: string;
+      prompt: string | null;
+      status: string;
+      result_url: string | null;
+    }
+  | undefined
+> {
+  const { data } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("task_id", taskId)
+    .single();
+
+  return data ?? undefined;
 }
 
-export function updateTaskStatus(
+export async function updateTaskStatus(
   taskId: string,
   status: string,
   resultUrl?: string
-): void {
-  db.prepare(
-    "UPDATE tasks SET status = ?, result_url = ? WHERE task_id = ?"
-  ).run(status, resultUrl || null, taskId);
+): Promise<void> {
+  await supabase
+    .from("tasks")
+    .update({ status, result_url: resultUrl || null })
+    .eq("task_id", taskId);
 }
-
-export default db;

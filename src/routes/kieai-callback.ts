@@ -25,7 +25,7 @@ export async function kieaiCallbackHandler(
       return;
     }
 
-    const task = dbService.getTask(taskId);
+    const task = await dbService.getTask(taskId);
     if (!task) {
       console.error("Task not found:", taskId);
       return;
@@ -42,12 +42,12 @@ export async function kieaiCallbackHandler(
 
     if (!isSuccess) {
       const errMsg = body.msg || body.data?.msg || "Generation failed";
-      dbService.updateTaskStatus(taskId, "failed");
+      await dbService.updateTaskStatus(taskId, "failed");
 
       // Refund on failure
       const model = getModelById(task.model);
       if (model) {
-        dbService.refund(
+        await dbService.refund(
           task.user_id,
           model.creditCost,
           `Refund: ${errMsg.slice(0, 50)}`,
@@ -125,11 +125,11 @@ export async function kieaiCallbackHandler(
     }
 
     if (resultUrls.length === 0) {
-      dbService.updateTaskStatus(taskId, "failed");
+      await dbService.updateTaskStatus(taskId, "failed");
 
       const model = getModelById(task.model);
       if (model) {
-        dbService.refund(
+        await dbService.refund(
           task.user_id,
           model.creditCost,
           "Refund: No result",
@@ -145,7 +145,7 @@ export async function kieaiCallbackHandler(
     }
 
     // Send results to user
-    dbService.updateTaskStatus(taskId, "success", resultUrls[0]);
+    await dbService.updateTaskStatus(taskId, "success", resultUrls[0]);
 
     const model = getModelById(task.model);
     const modelType = model?.type || "text-to-image";
@@ -169,7 +169,7 @@ export async function kieaiCallbackHandler(
       }
     }
 
-    const balance = dbService.getBalance(task.user_id);
+    const balance = await dbService.getBalance(task.user_id);
     await pushText(
       task.user_id,
       `Done! (${model?.label || task.model})\nBalance: ${balance.toFixed(2)} THB`
