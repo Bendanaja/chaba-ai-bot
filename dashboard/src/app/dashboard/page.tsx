@@ -337,7 +337,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat Cards Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
         {statCards.map((card) => (
           <div
             key={card.title}
@@ -366,9 +366,9 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Main 3-column grid ── */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-3">
         {/* ═══ LEFT COLUMN (spans 2) ═══ */}
-        <div className="xl:col-span-2 flex flex-col gap-5">
+        <div className="2xl:col-span-2 flex flex-col gap-5">
           {/* ── Large activity card with weekly BarChart ── */}
           <div
             className="card-enter rounded-2xl bg-white p-4 sm:p-6 shadow-sm"
