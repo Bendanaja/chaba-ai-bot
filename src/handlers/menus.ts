@@ -1,6 +1,7 @@
 import type { messagingApi } from "@line/bot-sdk";
 import { getModelsByCategory, type ModelDef } from "../models/kieai-models.js";
 import { config } from "../config.js";
+import type { Invoice } from "../services/database.js";
 
 // ==================== Chaba Theme ====================
 const C = {
@@ -463,5 +464,299 @@ export function buildPriceMenu(): messagingApi.FlexMessage {
     type: "flex",
     altText: "📋 ราคาทั้งหมด",
     contents: { type: "carousel", contents: bubbles },
+  };
+}
+
+// ==================== Receipt / Invoice ====================
+
+export function buildReceiptCard(invoice: Invoice): messagingApi.FlexBubble {
+  const itemRows: messagingApi.FlexComponent[] = invoice.items.map((item) => ({
+    type: "box" as const,
+    layout: "horizontal" as const,
+    contents: [
+      {
+        type: "text" as const,
+        text: item.description,
+        size: "sm" as const,
+        color: C.text,
+        flex: 3,
+        wrap: true,
+      },
+      {
+        type: "text" as const,
+        text: `${item.quantity}x`,
+        size: "xs" as const,
+        color: C.textSub,
+        flex: 1,
+        align: "center" as const,
+      },
+      {
+        type: "text" as const,
+        text: `฿${(item.quantity * item.unit_price).toFixed(2)}`,
+        size: "sm" as const,
+        color: C.text,
+        flex: 2,
+        align: "end" as const,
+        weight: "bold" as const,
+      },
+    ],
+    paddingTop: "6px",
+    paddingBottom: "6px",
+  }));
+
+  const date = new Date(invoice.created_at);
+  const dateStr = date.toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+  return {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            {
+              type: "text",
+              text: "🧾 ใบเสร็จรับเงิน",
+              weight: "bold",
+              size: "lg",
+              color: C.white,
+              flex: 3,
+            },
+            {
+              type: "text",
+              text: "PAID",
+              size: "xs",
+              color: "#FFFFFF",
+              align: "end",
+              weight: "bold",
+              flex: 1,
+              decoration: "none",
+            },
+          ],
+        },
+        {
+          type: "text",
+          text: `${invoice.invoice_number}`,
+          size: "xs",
+          color: "#FFFFFFBB",
+          margin: "sm",
+        },
+      ],
+      paddingAll: "18px",
+      background: {
+        type: "linearGradient",
+        angle: "135deg",
+        startColor: "#D63384",
+        endColor: "#B5246B",
+      },
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "ลูกค้า", size: "xs", color: C.textSub, flex: 1 },
+            { type: "text", text: invoice.customer_name, size: "sm", color: C.text, flex: 3, weight: "bold" },
+          ],
+          paddingBottom: "8px",
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "วันที่", size: "xs", color: C.textSub, flex: 1 },
+            { type: "text", text: dateStr, size: "sm", color: C.text, flex: 3 },
+          ],
+          paddingBottom: "12px",
+        },
+        { type: "separator", color: "#E8E8F0" },
+        {
+          type: "text",
+          text: "รายการ",
+          size: "xs",
+          color: C.textSub,
+          margin: "lg",
+        },
+        ...itemRows,
+        { type: "separator", color: "#E8E8F0", margin: "lg" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "ราคารวม", size: "sm", color: C.textSub, flex: 2 },
+            {
+              type: "text",
+              text: `฿${invoice.subtotal.toFixed(2)}`,
+              size: "sm",
+              color: C.text,
+              flex: 2,
+              align: "end",
+            },
+          ],
+          margin: "lg",
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: `VAT ${(invoice.tax_rate * 100).toFixed(0)}%`, size: "sm", color: C.textSub, flex: 2 },
+            {
+              type: "text",
+              text: `฿${invoice.tax_amount.toFixed(2)}`,
+              size: "sm",
+              color: C.text,
+              flex: 2,
+              align: "end",
+            },
+          ],
+          margin: "sm",
+        },
+        { type: "separator", color: C.gold, margin: "lg" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "ยอดรวมทั้งหมด", size: "md", weight: "bold", color: C.text, flex: 2 },
+            {
+              type: "text",
+              text: `฿${invoice.total.toFixed(2)}`,
+              size: "xl",
+              weight: "bold",
+              color: C.pink,
+              flex: 2,
+              align: "end",
+            },
+          ],
+          margin: "lg",
+          paddingBottom: "4px",
+        },
+      ],
+      paddingAll: "18px",
+      backgroundColor: C.cream,
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: "📄 ดูแบบเต็ม",
+              size: "sm",
+              weight: "bold",
+              color: C.white,
+              align: "center",
+            },
+          ],
+          paddingAll: "12px",
+          cornerRadius: "8px",
+          background: {
+            type: "linearGradient",
+            angle: "90deg",
+            startColor: "#C8A951",
+            endColor: "#E8D48B",
+          },
+          action: {
+            type: "uri",
+            label: "ดูแบบเต็ม",
+            uri: `https://admin.chaba.icutmc.com/dashboard/invoices/${invoice.id}`,
+          },
+        },
+      ],
+      paddingAll: "12px",
+      backgroundColor: C.cream,
+    },
+  };
+}
+
+export function buildReceiptList(invoices: Invoice[]): messagingApi.FlexMessage {
+  if (invoices.length === 0) {
+    return {
+      type: "flex",
+      altText: "🧾 ไม่มีใบเสร็จ",
+      contents: {
+        type: "bubble",
+        size: "kilo",
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            { type: "text", text: "🧾 ยังไม่มีใบเสร็จ", size: "md", weight: "bold", color: C.text, align: "center" },
+            { type: "text", text: "ใบเสร็จจะสร้างเมื่อสร้างผลงานสำเร็จ", size: "sm", color: C.textSub, align: "center", margin: "md", wrap: true },
+          ],
+          paddingAll: "24px",
+          backgroundColor: C.cream,
+        },
+      },
+    };
+  }
+
+  const bubbles = invoices.map((inv) => buildReceiptCard(inv));
+
+  return {
+    type: "flex",
+    altText: `🧾 ใบเสร็จล่าสุด ${invoices.length} รายการ`,
+    contents: { type: "carousel", contents: bubbles.slice(0, 10) },
+  };
+}
+
+export function buildReceiptButton(taskId: string): messagingApi.FlexMessage {
+  return {
+    type: "flex",
+    altText: "🧾 ขอใบเสร็จ",
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "text",
+                text: "🧾 ขอใบเสร็จ",
+                size: "md",
+                weight: "bold",
+                color: C.white,
+                align: "center",
+              },
+            ],
+            paddingAll: "12px",
+            cornerRadius: "10px",
+            background: {
+              type: "linearGradient",
+              angle: "90deg",
+              startColor: "#C8A951",
+              endColor: "#E8D48B",
+            },
+            action: {
+              type: "postback",
+              label: "ขอใบเสร็จ",
+              data: `action=request_receipt&task_id=${taskId}`,
+              displayText: "🧾 ขอใบเสร็จ",
+            },
+          },
+        ],
+        paddingAll: "12px",
+        backgroundColor: C.cream,
+      },
+    },
   };
 }

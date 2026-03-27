@@ -240,6 +240,11 @@
    Utility Classes
    ============================================= */
 
+/* Dark sidebar with gradient */
+.sidebar-dark {
+  background: linear-gradient(165deg, #1A1A2E 0%, #2D1B3D 100%);
+}
+
 /* Glass morphism card */
 .glass-card {
   background: rgba(255, 255, 255, 0.7);
@@ -258,6 +263,47 @@
     0 16px 48px rgba(214, 51, 132, 0.1);
   transform: translateY(-2px);
   border-color: rgba(214, 51, 132, 0.15);
+}
+
+/* Dashboard card - white bg, rounded-2xl, shadow-sm */
+.dashboard-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  padding: 1.5rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Stat card with left color accent */
+.stat-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #D63384, #6C5CE7);
+  border-radius: 0 4px 4px 0;
+}
+
+.stat-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
 }
 
 /* Glass morphism sidebar */
@@ -330,6 +376,13 @@
 
 .nav-item-chaba:hover .nav-icon {
   animation: icon-bounce 0.4s ease;
+}
+
+/* Active nav pill - pink background */
+.nav-active-pill {
+  background: #D63384;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(214, 51, 132, 0.35);
 }
 
 /* Active nav item glass effect */
@@ -447,6 +500,11 @@
   background: rgba(214, 51, 132, 0.3);
 }
 
+/* Warm gradient background for main content area */
+.main-gradient-bg {
+  background: linear-gradient(135deg, #FFF0E8 0%, #F8F0FF 50%, #F0E6FF 100%);
+}
+
 /* Main content area subtle background pattern */
 .content-bg {
   background:
@@ -482,4 +540,34 @@
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   border-bottom: 1px solid rgba(214, 51, 132, 0.08);
+}
+
+/* Top bar card style */
+.topbar-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+  padding: 0.75rem 1.5rem;
+}
+
+/* Search input for top bar */
+.search-input {
+  background: #F5F3F0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  font-size: 0.875rem;
+  color: #1A1A2E;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.search-input:focus {
+  border-color: #D63384;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(214, 51, 132, 0.1);
 }

@@ -24,6 +24,27 @@ export interface Transaction {
   created_at: string;
 }
 
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface Invoice {
+  id: string;
+  invoice_number: string;
+  type: string;
+  customer_name: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  tax_rate: number;
+  tax_amount: number;
+  total: number;
+  status: string;
+  notes: string | null;
+  created_at: string;
+}
+
 // ==================== User ====================
 
 export async function getOrCreateUser(
@@ -235,4 +256,87 @@ export async function updateTaskStatus(
     .from("tasks")
     .update({ status, result_url: resultUrl || null })
     .eq("task_id", taskId);
+}
+
+// ==================== Invoices ====================
+
+export async function getNextInvoiceNumber(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `RCP-${year}-`;
+
+  const { data } = await supabase
+    .from("invoices")
+    .select("invoice_number")
+    .like("invoice_number", `${prefix}%`)
+    .order("invoice_number", { ascending: false })
+    .limit(1);
+
+  let seq = 1;
+  if (data && data.length > 0) {
+    const last = data[0].invoice_number as string;
+    const num = parseInt(last.replace(prefix, ""), 10);
+    if (!isNaN(num)) seq = num + 1;
+  }
+
+  return `${prefix}${String(seq).padStart(4, "0")}`;
+}
+
+export async function createInvoice(data: {
+  userId: string;
+  customerName: string;
+  items: InvoiceItem[];
+  taskId?: string;
+  notes?: string;
+}): Promise<Invoice> {
+  const invoiceNumber = await getNextInvoiceNumber();
+
+  const subtotal = data.items.reduce(
+    (sum, item) => sum + item.quantity * item.unit_price,
+    0
+  );
+  const taxRate = 0.07;
+  const taxAmount = Math.round(subtotal * taxRate * 100) / 100;
+  const total = Math.round((subtotal + taxAmount) * 100) / 100;
+
+  const row = {
+    invoice_number: invoiceNumber,
+    type: "receipt",
+    customer_name: data.customerName,
+    items: data.items,
+    subtotal,
+    tax_rate: taxRate,
+    tax_amount: taxAmount,
+    total,
+    status: "paid",
+    notes: data.notes || null,
+    user_id: data.userId,
+    task_id: data.taskId || null,
+  };
+
+  const { data: inserted, error } = await supabase
+    .from("invoices")
+    .insert(row)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("Create invoice error:", error);
+    throw error;
+  }
+
+  return inserted as Invoice;
+}
+
+export async function getInvoicesByUser(
+  userId: string,
+  limit = 5
+): Promise<Invoice[]> {
+  const { data } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data || []) as Invoice[];
 }

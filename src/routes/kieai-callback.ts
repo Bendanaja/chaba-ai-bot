@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
-import { pushImage, pushText, pushVideo, pushAudio } from "../services/line.js";
+import { pushImage, pushText, pushVideo, pushAudio, pushMessage } from "../services/line.js";
 import * as kieai from "../services/kieai.js";
 import * as dbService from "../services/database.js";
 import { getModelById } from "../models/kieai-models.js";
+import { buildReceiptButton } from "../handlers/menus.js";
 
 export async function kieaiCallbackHandler(
   req: Request,
@@ -174,6 +175,9 @@ export async function kieaiCallbackHandler(
       task.user_id,
       `Done! (${model?.label || task.model})\nBalance: ${balance.toFixed(2)} THB`
     );
+
+    // Send receipt request button
+    await pushMessage(task.user_id, buildReceiptButton(taskId));
   } catch (err) {
     console.error("Callback processing error:", err);
   }

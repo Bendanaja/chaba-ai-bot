@@ -15,7 +15,7 @@ import {
   getCurrentStepMessage,
   type Session,
 } from "./session.js";
-import { buildMainMenu } from "./menus.js";
+import { buildMainMenu, buildReceiptList } from "./menus.js";
 
 // Pending commands: user typed /removebg, /upscale, etc. waiting for image
 const pendingCommands = new Map<
@@ -272,6 +272,14 @@ export async function handleTextMessage(
         return;
       }
 
+      case "/receipt":
+      case "/receipts":
+      case "/invoice": {
+        const invoices = await dbService.getInvoicesByUser(userId, 5);
+        await replyMessage(replyToken, buildReceiptList(invoices));
+        return;
+      }
+
       case "/price": {
         const categories = ["image", "video", "audio", "music"] as const;
         const sections = categories.map((cat) => {
@@ -311,6 +319,7 @@ export async function handleTextMessage(
             "[เพลง]",
             "/music - สร้างเพลง",
             "",
+            "/receipt - ดูใบเสร็จ",
             "/price - ดูราคา",
             "/cancel - ยกเลิก",
           ].join("\n")

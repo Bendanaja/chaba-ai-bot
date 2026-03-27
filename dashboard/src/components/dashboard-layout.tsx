@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -24,11 +24,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden md:block">
-        <Sidebar className="fixed inset-y-0 left-0 z-30" />
+        <Sidebar
+          className="fixed inset-y-0 left-0 z-30"
+          onLogout={handleLogout}
+        />
       </div>
 
       {/* Main area */}
-      <div className="flex flex-1 flex-col md:ml-[260px]">
+      <div className="flex flex-1 flex-col md:ml-[260px] main-gradient-bg">
         {/* Mobile top bar */}
         <header className="mobile-header-glass flex items-center justify-between px-4 py-3 md:hidden">
           <Sheet>
@@ -40,7 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <SheetContent side="left" className="w-[260px] p-0" showCloseButton={false}>
               <SheetTitle className="sr-only">Navigation</SheetTitle>
               <SheetDescription className="sr-only">Main navigation sidebar</SheetDescription>
-              <Sidebar className="h-full w-full" />
+              <Sidebar className="h-full w-full" onLogout={handleLogout} />
             </SheetContent>
           </Sheet>
 
@@ -51,15 +54,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleLogout}
             className="text-muted-foreground hover:text-chaba-pink transition-colors"
           >
-            <LogOut className="size-5" />
+            <Bell className="size-5" />
           </Button>
         </header>
 
+        {/* Desktop top bar */}
+        <header className="hidden md:flex items-center justify-between px-8 pt-6 pb-2">
+          <div>
+            <h1 className="text-xl font-semibold text-[#1A1A2E]">
+              สวัสดี 👋
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="ค้นหา..."
+                className="search-input w-56 pl-9"
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-chaba-pink transition-colors relative"
+            >
+              <Bell className="size-5" />
+              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-[#D63384]" />
+            </Button>
+          </div>
+        </header>
+
         {/* Content */}
-        <main className="flex-1 overflow-y-auto chaba-scrollbar content-bg p-4 md:p-8">
+        <main className="flex-1 overflow-y-auto chaba-scrollbar p-4 md:px-8 md:py-4">
           <div className="mx-auto max-w-7xl page-enter">{children}</div>
         </main>
       </div>

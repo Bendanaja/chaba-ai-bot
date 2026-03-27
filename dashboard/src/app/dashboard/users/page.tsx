@@ -3,13 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
   TableCell,
@@ -72,7 +65,6 @@ export default function UsersPage() {
   const [topupAmount, setTopupAmount] = useState("");
   const [topupOpen, setTopupOpen] = useState(false);
   const [topupLoading, setTopupLoading] = useState(false);
-  const [visible, setVisible] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -106,12 +98,6 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers(1, "");
   }, [fetchUsers]);
-
-  useEffect(() => {
-    if (!loading) {
-      requestAnimationFrame(() => setVisible(true));
-    }
-  }, [loading]);
 
   function handleSearchChange(value: string) {
     setSearch(value);
@@ -171,13 +157,7 @@ export default function UsersPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Page header */}
-      <div
-        className="transition-all duration-500"
-        style={{
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(12px)",
-        }}
-      >
+      <div>
         <div className="flex items-center gap-2">
           <Users className="h-6 w-6 text-chaba-pink" />
           <h1 className="text-2xl font-bold">ผู้ใช้</h1>
@@ -188,14 +168,7 @@ export default function UsersPage() {
       </div>
 
       {/* Search bar */}
-      <div
-        className="relative max-w-md transition-all duration-500"
-        style={{
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(12px)",
-          transitionDelay: "100ms",
-        }}
-      >
+      <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="ค้นหาผู้ใช้..."
@@ -205,194 +178,189 @@ export default function UsersPage() {
         />
       </div>
 
-      {/* Users table */}
-      <Card className="glass-card card-enter overflow-hidden" style={{ animationDelay: "0.15s" }}>
-        <CardHeader className="border-b bg-muted/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <UserCircle className="h-4 w-4 text-chaba-pink" />
-                รายชื่อผู้ใช้
-              </CardTitle>
-              <CardDescription>
-                ทั้งหมด {pagination.total.toLocaleString()} คน
-              </CardDescription>
-            </div>
+      {/* Users table in white rounded card */}
+      <div
+        className="card-enter rounded-2xl bg-white shadow-sm overflow-hidden"
+        style={{ animationDelay: "0.15s" }}
+      >
+        <div className="flex items-center justify-between border-b bg-muted/30 px-6 py-4">
+          <div>
+            <h3 className="flex items-center gap-2 font-semibold text-base">
+              <UserCircle className="h-4 w-4 text-chaba-pink" />
+              รายชื่อผู้ใช้
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              ทั้งหมด {pagination.total.toLocaleString()} คน
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/20 hover:bg-muted/20">
-                <TableHead>User ID</TableHead>
-                <TableHead>ชื่อ</TableHead>
-                <TableHead>ยอดเงิน</TableHead>
-                <TableHead>Model</TableHead>
-                <TableHead>Tasks</TableHead>
-                <TableHead>สร้างเมื่อ</TableHead>
-                <TableHead className="text-right">เติมเงิน</TableHead>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/20 hover:bg-muted/20">
+              <TableHead>User ID</TableHead>
+              <TableHead>ชื่อ</TableHead>
+              <TableHead>ยอดเงิน</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead>Tasks</TableHead>
+              <TableHead>สร้างเมื่อ</TableHead>
+              <TableHead className="text-right">เติมเงิน</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-12">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Loading...</span>
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center py-12"
-                  >
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Loading...</span>
-                    </div>
+            ) : users.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="text-center py-12 text-muted-foreground"
+                >
+                  ไม่พบผู้ใช้
+                </TableCell>
+              </TableRow>
+            ) : (
+              users.map((user) => (
+                <TableRow
+                  key={user.user_id}
+                  className="group transition-colors hover:bg-chaba-pink/[0.03]"
+                >
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {user.user_id.slice(0, 10)}...
                   </TableCell>
-                </TableRow>
-              ) : users.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center py-12 text-muted-foreground"
-                  >
-                    ไม่พบผู้ใช้
+                  <TableCell className="font-medium">
+                    {user.display_name || (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
-                </TableRow>
-              ) : (
-                users.map((user) => (
-                  <TableRow
-                    key={user.user_id}
-                    className="group transition-colors hover:bg-chaba-pink/[0.03]"
-                  >
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {user.user_id.slice(0, 10)}...
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {user.display_name || (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{balanceBadge(user.balance)}</TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded-md bg-chaba-purple/10 px-2 py-0.5 text-xs font-medium text-chaba-purple">
-                        {user.selected_model}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">{user.task_count.toLocaleString()}</span>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString("th-TH", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Dialog
-                        open={topupOpen && topupUserId === user.user_id}
-                        onOpenChange={(open) => {
-                          setTopupOpen(open);
-                          if (open) {
-                            setTopupUserId(user.user_id);
-                            setTopupAmount("");
-                          }
-                        }}
+                  <TableCell>{balanceBadge(user.balance)}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center rounded-md bg-chaba-purple/10 px-2 py-0.5 text-xs font-medium text-chaba-purple">
+                      {user.selected_model}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-medium">
+                      {user.task_count.toLocaleString()}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {new Date(user.created_at).toLocaleDateString("th-TH", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Dialog
+                      open={topupOpen && topupUserId === user.user_id}
+                      onOpenChange={(open) => {
+                        setTopupOpen(open);
+                        if (open) {
+                          setTopupUserId(user.user_id);
+                          setTopupAmount("");
+                        }
+                      }}
+                    >
+                      <DialogTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="opacity-60 group-hover:opacity-100 transition-opacity hover:border-chaba-pink/30 hover:text-chaba-pink"
+                          />
+                        }
                       >
-                        <DialogTrigger
-                          render={
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="opacity-60 group-hover:opacity-100 transition-opacity hover:border-chaba-pink/30 hover:text-chaba-pink"
+                        <Wallet className="mr-1 h-3 w-3" />
+                        เติมเงิน
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <Wallet className="h-4 w-4 text-chaba-pink" />
+                            เติมเงิน
+                          </DialogTitle>
+                          <DialogDescription>
+                            เติมเงินให้{" "}
+                            <span className="font-medium text-foreground">
+                              {user.display_name || user.user_id.slice(0, 10)}
+                            </span>
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex flex-col gap-4 py-2">
+                          <div className="flex flex-col gap-2">
+                            <Label htmlFor="topup-amount">
+                              จำนวนเงิน (THB)
+                            </Label>
+                            <Input
+                              id="topup-amount"
+                              type="number"
+                              min="1"
+                              max="100000"
+                              placeholder="0"
+                              value={topupAmount}
+                              onChange={(e) => setTopupAmount(e.target.value)}
                             />
-                          }
-                        >
-                          <Wallet className="mr-1 h-3 w-3" />
-                          เติมเงิน
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                              <Wallet className="h-4 w-4 text-chaba-pink" />
-                              เติมเงิน
-                            </DialogTitle>
-                            <DialogDescription>
-                              เติมเงินให้{" "}
-                              <span className="font-medium text-foreground">
-                                {user.display_name || user.user_id.slice(0, 10)}
-                              </span>
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="flex flex-col gap-4 py-2">
-                            <div className="flex flex-col gap-2">
-                              <Label htmlFor="topup-amount">จำนวนเงิน (THB)</Label>
-                              <Input
-                                id="topup-amount"
-                                type="number"
-                                min="1"
-                                max="100000"
-                                placeholder="0"
-                                value={topupAmount}
-                                onChange={(e) => setTopupAmount(e.target.value)}
-                              />
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {quickAmounts.map((amt) => (
-                                <button
-                                  key={amt}
-                                  type="button"
-                                  onClick={() => setTopupAmount(String(amt))}
-                                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                                    topupAmount === String(amt)
-                                      ? "border-chaba-pink bg-chaba-pink/10 text-chaba-pink"
-                                      : "border-border text-muted-foreground hover:border-chaba-pink/30 hover:text-chaba-pink"
-                                  }`}
-                                >
-                                  +{amt.toLocaleString()}
-                                </button>
-                              ))}
-                            </div>
                           </div>
-                          <DialogFooter>
-                            <Button
-                              onClick={handleTopup}
-                              disabled={topupLoading || !topupAmount}
-                              className="btn-chaba text-white shadow-md"
-                            >
-                              {topupLoading ? (
-                                <>
-                                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                  กำลังเติม...
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="mr-1 h-3 w-3" />
-                                  เติมเงิน
-                                </>
-                              )}
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                          <div className="flex flex-wrap gap-2">
+                            {quickAmounts.map((amt) => (
+                              <button
+                                key={amt}
+                                type="button"
+                                onClick={() => setTopupAmount(String(amt))}
+                                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                                  topupAmount === String(amt)
+                                    ? "border-chaba-pink bg-chaba-pink/10 text-chaba-pink"
+                                    : "border-border text-muted-foreground hover:border-chaba-pink/30 hover:text-chaba-pink"
+                                }`}
+                              >
+                                +{amt.toLocaleString()}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            onClick={handleTopup}
+                            disabled={topupLoading || !topupAmount}
+                            className="btn-chaba text-white shadow-md"
+                          >
+                            {topupLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                กำลังเติม...
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="mr-1 h-3 w-3" />
+                                เติมเงิน
+                              </>
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div
-          className="flex items-center justify-between transition-all duration-500"
-          style={{
-            opacity: visible ? 1 : 0,
-            transitionDelay: "400ms",
-          }}
-        >
+        <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            หน้า {pagination.page} จาก {pagination.totalPages}
-            {" "}({pagination.total.toLocaleString()} รายการ)
+            หน้า {pagination.page} จาก {pagination.totalPages} (
+            {pagination.total.toLocaleString()} รายการ)
           </p>
           <div className="flex items-center gap-1">
             <Button
@@ -400,43 +368,48 @@ export default function UsersPage() {
               size="sm"
               disabled={pagination.page <= 1}
               onClick={() => fetchUsers(pagination.page - 1, search)}
-              className="hover:border-[#D63384]/30 hover:text-[#D63384]"
+              className="hover:border-chaba-pink/30 hover:text-chaba-pink"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
-              let pageNum: number;
-              if (pagination.totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (pagination.page <= 3) {
-                pageNum = i + 1;
-              } else if (pagination.page >= pagination.totalPages - 2) {
-                pageNum = pagination.totalPages - 4 + i;
-              } else {
-                pageNum = pagination.page - 2 + i;
+            {Array.from(
+              { length: Math.min(pagination.totalPages, 5) },
+              (_, i) => {
+                let pageNum: number;
+                if (pagination.totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (pagination.page <= 3) {
+                  pageNum = i + 1;
+                } else if (pagination.page >= pagination.totalPages - 2) {
+                  pageNum = pagination.totalPages - 4 + i;
+                } else {
+                  pageNum = pagination.page - 2 + i;
+                }
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={
+                      pagination.page === pageNum ? "default" : "outline"
+                    }
+                    size="sm"
+                    onClick={() => fetchUsers(pageNum, search)}
+                    className={
+                      pagination.page === pageNum
+                        ? "btn-chaba text-white border-0"
+                        : "hover:border-chaba-pink/30 hover:text-chaba-pink"
+                    }
+                  >
+                    {pageNum}
+                  </Button>
+                );
               }
-              return (
-                <Button
-                  key={pageNum}
-                  variant={pagination.page === pageNum ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => fetchUsers(pageNum, search)}
-                  className={
-                    pagination.page === pageNum
-                      ? "bg-gradient-to-r from-[#D63384] to-[#6C5CE7] text-white border-0"
-                      : "hover:border-[#D63384]/30 hover:text-[#D63384]"
-                  }
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
+            )}
             <Button
               variant="outline"
               size="sm"
               disabled={pagination.page >= pagination.totalPages}
               onClick={() => fetchUsers(pagination.page + 1, search)}
-              className="hover:border-[#D63384]/30 hover:text-[#D63384]"
+              className="hover:border-chaba-pink/30 hover:text-chaba-pink"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

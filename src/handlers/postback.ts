@@ -7,6 +7,7 @@ import {
   buildCategoryMenu,
   buildWalletMenu,
   buildPriceMenu,
+  buildReceiptCard,
 } from "./menus.js";
 import {
   startSession,
@@ -200,6 +201,60 @@ export async function handlePostback(event: webhook.PostbackEvent): Promise<void
     case "show_models": {
       await replyMessage(replyToken, buildMainMenu());
       break;
+    }
+
+    // ==================== Receipt / Invoice ====================
+    case "request_receipt": {
+      const taskId = params.get("task_id");
+      if (!taskId) {
+        await replyText(replyToken, "ไม่พบข้อมูลงาน");
+        return;
+      }
+
+      const task = await dbService.getTask(taskId);
+      if (!task || task.user_id !== userId) {
+        await replyText(replyToken, "ไม่พบข้อมูลงาน");
+        return;
+      }
+
+      // Find the transaction for this task to get the amount
+      const txns = await dbService.getTransactions(userId, 50);
+      const taskTxn = txns.find(
+        (t) => t.task_id === taskId && t.type === "spend"
+      );
+      const amount = taskTxn?.amount ?? 0;
+
+      // Get user display name
+      const user = await dbService.getOrCreateUser(userId);
+
+      try {
+        const invoice = await dbService.createInvoice({
+          userId,
+          customerName: user.display_name || `LINE User`,
+          items: [
+            {
+              description: task.prompt
+                ? `${task.model}: ${task.prompt.slice(0, 60)}`
+                : `AI Generation (${task.model})`,
+              quantity: 1,
+              unit_price: amount,
+            },
+          ],
+          taskId,
+          notes: `Task: ${taskId}`,
+        });
+
+        const receiptBubble = buildReceiptCard(invoice);
+        await replyMessage(replyToken, {
+          type: "flex",
+          altText: `🧾 ใบเสร็จ ${invoice.invoice_number}`,
+          contents: receiptBubble,
+        });
+      } catch (err) {
+        console.error("Create receipt error:", err);
+        await replyText(replyToken, "สร้างใบเสร็จไม่สำเร็จ ลองใหม่อีกครั้ง");
+      }
+      return;
     }
 
     default:

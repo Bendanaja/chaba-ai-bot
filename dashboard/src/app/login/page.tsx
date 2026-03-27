@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 
@@ -52,9 +51,10 @@ export default function LoginPage() {
       <div
         className="absolute inset-0"
         style={{
-          background: "linear-gradient(-45deg, #D63384, #6C5CE7, #C8A951, #D63384)",
+          background:
+            "linear-gradient(-45deg, #D63384, #6C5CE7, #C8A951, #D63384)",
           backgroundSize: "400% 400%",
-          animation: "gradientShift 15s ease infinite",
+          animation: "gradient-shift 15s ease infinite",
         }}
       />
 
@@ -78,8 +78,8 @@ export default function LoginPage() {
       </div>
 
       {/* Login card with glassmorphism */}
-      <Card
-        className={`relative z-10 w-full max-w-sm border-0 shadow-2xl transition-all duration-700 ${
+      <div
+        className={`relative z-10 w-full max-w-sm rounded-2xl border-0 shadow-2xl transition-all duration-700 ${
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         }`}
         style={{
@@ -88,13 +88,9 @@ export default function LoginPage() {
           WebkitBackdropFilter: "blur(20px)",
         }}
       >
-        <CardHeader className="items-center gap-3 pb-2 pt-6">
-          <div
-            className="relative h-24 w-24 overflow-hidden rounded-full shadow-lg"
-            style={{
-              boxShadow: "0 0 30px rgba(214, 51, 132, 0.3)",
-            }}
-          >
+        {/* Header with mascot */}
+        <div className="flex flex-col items-center gap-3 px-6 pb-2 pt-8">
+          <div className="relative h-24 w-24 overflow-hidden rounded-full avatar-glow">
             <Image
               src="/chaba-mascot.jpg"
               alt="Chaba Mascot"
@@ -104,22 +100,17 @@ export default function LoginPage() {
             />
           </div>
           <div className="text-center">
-            <h1
-              className="text-2xl font-bold tracking-tight"
-              style={{
-                background: "linear-gradient(135deg, #D63384, #C8A951, #D63384)",
-                backgroundSize: "200% auto",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                animation: "shimmer 3s linear infinite",
-              }}
-            >
+            <h1 className="text-2xl font-bold tracking-tight gold-shimmer">
               Chaba AI
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Admin Dashboard</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Admin Dashboard
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="px-6 pb-6">
+        </div>
+
+        {/* Form */}
+        <div className="px-6 pb-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="password">Password</Label>
@@ -156,10 +147,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#D63384] to-[#6C5CE7] text-white hover:opacity-90 h-9 text-sm font-medium shadow-lg transition-all duration-300"
-              style={{
-                boxShadow: loading ? "none" : "0 4px 20px rgba(214, 51, 132, 0.3)",
-              }}
+              className="w-full btn-chaba text-white h-9 text-sm font-medium"
             >
               {loading ? (
                 <>
@@ -171,32 +159,44 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* CSS animations */}
+      {/* CSS animations for login-specific effects */}
       <style jsx>{`
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
         @keyframes floatUp {
-          0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-          10% { opacity: 0.2; }
-          90% { opacity: 0.2; }
-          100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
-        }
-        @keyframes shimmer {
-          0% { background-position: 0% center; }
-          100% { background-position: 200% center; }
+          0% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.2;
+          }
+          90% {
+            opacity: 0.2;
+          }
+          100% {
+            transform: translateY(-100vh) rotate(720deg);
+            opacity: 0;
+          }
         }
         @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-6px); }
-          40% { transform: translateX(6px); }
-          60% { transform: translateX(-4px); }
-          80% { transform: translateX(4px); }
+          0%,
+          100% {
+            transform: translateX(0);
+          }
+          20% {
+            transform: translateX(-6px);
+          }
+          40% {
+            transform: translateX(6px);
+          }
+          60% {
+            transform: translateX(-4px);
+          }
+          80% {
+            transform: translateX(4px);
+          }
         }
       `}</style>
     </div>
