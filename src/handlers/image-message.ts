@@ -7,6 +7,7 @@ import {
   getPendingCommand,
   clearPendingCommand,
 } from "./text-message.js";
+import { getSession, clearSession } from "./session.js";
 
 export async function handleImageMessage(
   event: webhook.MessageEvent & { message: webhook.ImageMessageContent }
@@ -19,14 +20,21 @@ export async function handleImageMessage(
 
   await dbService.getOrCreateUser(userId);
 
-  // Determine what to do with the image
+  // Check session first (from menu postback), then pendingCommand (from text command)
+  const session = getSession(userId);
   const pending = getPendingCommand(userId);
   clearPendingCommand(userId);
 
   let modelId: string;
   let prompt: string | undefined;
 
-  if (pending?.command === "removebg") {
+  if (session?.command === "removebg_wait") {
+    modelId = "recraft/remove-background";
+    clearSession(userId);
+  } else if (session?.command === "upscale_wait") {
+    modelId = "topaz/image-upscale";
+    clearSession(userId);
+  } else if (pending?.command === "removebg") {
     modelId = "recraft/remove-background";
   } else if (pending?.command === "upscale") {
     modelId = "topaz/image-upscale";
