@@ -53,6 +53,24 @@ export interface Invoice {
   created_at: string;
 }
 
+export interface PaymentSlip {
+  slip_id: string;
+  amount: number;
+  user_id: string;
+  created_at: string;
+}
+
+// ==================== Settings ====================
+
+export async function getSetting(key: string): Promise<any> {
+  const { data } = await supabase.from("settings").select("value").eq("key", key).single();
+  return data?.value ?? null;
+}
+
+export async function setSetting(key: string, value: any): Promise<void> {
+  await supabase.from("settings").upsert({ key, value, updated_at: new Date().toISOString() });
+}
+
 // ==================== User ====================
 
 export async function getOrCreateUser(
@@ -199,6 +217,30 @@ export async function refund(
     description,
     task_id: taskId || null,
   });
+}
+
+export async function isSlipUsed(slipId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("payment_slips")
+    .select("slip_id")
+    .eq("slip_id", slipId)
+    .maybeSingle();
+  return !!data;
+}
+
+export async function recordSlip(params: {
+  slipId: string;
+  amount: number;
+  userId: string;
+}): Promise<void> {
+  await supabase.from("payment_slips").upsert(
+    {
+      slip_id: params.slipId,
+      amount: params.amount,
+      user_id: params.userId,
+    },
+    { onConflict: "slip_id" }
+  );
 }
 
 export async function getTransactions(

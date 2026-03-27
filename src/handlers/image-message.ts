@@ -5,9 +5,13 @@ import * as dbService from "../services/database.js";
 import { getModelById } from "../models/kieai-models.js";
 import {
   getPendingTopup,
+  setPendingTopup,
+  clearPendingTopup,
   getPendingCommand,
   clearPendingCommand,
+  executeGenerationForUser,
 } from "./text-message.js";
+import { verifySlip } from "../services/slip2go.js";
 import { getSession, clearSession } from "./session.js";
 
 export async function handleImageMessage(
@@ -26,19 +30,56 @@ export async function handleImageMessage(
   const pending = getPendingCommand(userId);
   clearPendingCommand(userId);
 
-  // Slip detection: if user sends image with no active image command but has pending topup
+  // Slip detection: auto-verify via Slip2Go when user sends image with pending topup
   if (!session && !pending) {
     const topupPending = getPendingTopup(userId);
     if (topupPending) {
-      const adminIds = (process.env["ADMIN_USER_IDS"] || "").split(",").filter(Boolean);
-      const pendingModel = getModelById(topupPending.modelId);
-      for (const adminId of adminIds) {
-        await pushText(
-          adminId,
-          `📸 สลิปโอนเงินจากลูกค้านะคะ!\n\n👤 LINE ID: ${userId}\n💸 ขาดอีก: ${topupPending.shortfall.toFixed(2)} บาท\n🎨 รายการ: ${pendingModel?.label || topupPending.modelId}\n\nอนุมัติด้วย:\n/topup ${Math.ceil(topupPending.shortfall)} ${userId}`
+      await replyText(replyToken, "🔍 กำลังตรวจสอบสลิปนะคะ รอแป๊บนึง~");
+      try {
+        const imageBuffer = await getImageBuffer(messageId);
+        const result = await verifySlip(imageBuffer);
+
+        if (!result.success) {
+          await pushText(userId, `❌ ${result.message}\n\nส่งสลิปใหม่ได้เลยนะคะ 💕`);
+          return;
+        }
+
+        // Check duplicate
+        const used = await dbService.isSlipUsed(result.slipId);
+        if (used) {
+          await pushText(userId, "❌ สลิปนี้ถูกใช้ไปแล้วนะคะ กรุณาโอนเงินใหม่แล้วส่งสลิปใหม่ค่ะ");
+          return;
+        }
+
+        // Check amount sufficient
+        if (result.amount < topupPending.shortfall) {
+          await dbService.recordSlip({ slipId: result.slipId, amount: result.amount, userId });
+          const newBal = await dbService.topUp(userId, result.amount);
+          const remaining = topupPending.shortfall - result.amount;
+          setPendingTopup(userId, { ...topupPending, shortfall: remaining });
+          await pushText(userId,
+            `💸 ได้รับ ${result.amount.toFixed(2)} บาทแล้วค่ะ ยังขาดอีก ${remaining.toFixed(2)} บาทนะคะ\n💰 ยอดปัจจุบัน: ${newBal.toFixed(2)} บาท\n\nโอนเพิ่มแล้วส่งสลิปมาอีกทีนะคะ 💕`
+          );
+          return;
+        }
+
+        // All good — topup + auto-generate
+        await dbService.recordSlip({ slipId: result.slipId, amount: result.amount, userId });
+        const newBalance = await dbService.topUp(userId, result.amount);
+        clearPendingTopup(userId);
+
+        await pushText(userId,
+          `✅ ตรวจสอบสลิปผ่านแล้วค่ะ!\n💰 เติมเงิน ${result.amount.toFixed(2)} บาท\n💎 ยอดคงเหลือ: ${newBalance.toFixed(2)} บาท`
         );
+
+        const pendingModel = getModelById(topupPending.modelId);
+        if (pendingModel && newBalance >= pendingModel.creditCost) {
+          await executeGenerationForUser(userId, pendingModel, topupPending.prompt, topupPending.extraInput);
+        }
+      } catch (err) {
+        console.error("Slip verification error:", err);
+        await pushText(userId, "😅 เกิดข้อผิดพลาดในการตรวจสอบสลิป ลองส่งใหม่อีกทีนะคะ~");
       }
-      await replyText(replyToken, `📸 ส่งสลิปให้ admin แล้วนะคะ รอแป๊บนึงนะ~ 💕\nหลังจาก admin อนุมัติ น้องชบาจะสร้างให้อัตโนมัติเลยค่า!`);
       return;
     }
   }

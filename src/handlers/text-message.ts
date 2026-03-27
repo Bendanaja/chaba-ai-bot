@@ -546,7 +546,7 @@ export async function executeGeneration(
   }
 }
 
-async function executeGenerationForUser(
+export async function executeGenerationForUser(
   userId: string,
   model: { id: string; label: string; creditCost: number; apiType: string },
   prompt: string,

@@ -21,6 +21,7 @@ export const config = {
   },
   payment: {
     promptpay: process.env["PROMPTPAY_NUMBER"] || "",
+    slip2goToken: process.env["SLIP2GO_TOKEN"] || "",
   },
   port: parseInt(process.env["PORT"] || "3000", 10),
 } as const;
