@@ -64,7 +64,7 @@ export async function handleTextMessage(
   const greetings = ["เมนู", "menu", "สวัสดี", "hi", "hello", "start"];
   if (greetings.includes(text.toLowerCase())) {
     clearSession(userId);
-    await replyMessage(replyToken, buildMainMenu());
+    await replyMessage(replyToken, await buildMainMenu());
     return;
   }
 
@@ -85,7 +85,7 @@ export async function handleTextMessage(
     switch (cmd) {
       case "/menu":
       case "/start": {
-        await replyMessage(replyToken, buildMainMenu());
+        await replyMessage(replyToken, await buildMainMenu());
         return;
       }
 
@@ -463,7 +463,7 @@ export async function executeGeneration(
   if (balance < model.creditCost) {
     await replyText(
       replyToken,
-      `ยอดเงินไม่พอ\nต้องการ: ${model.creditCost} THB\nคงเหลือ: ${balance.toFixed(2)} THB\n\nใช้ /topup <จำนวน> เพื่อเติมเงิน`
+      `🪙 เงินไม่พอค่าา~\nต้องการ ${model.creditCost} บาท แต่คงเหลือแค่ ${balance.toFixed(2)} บาทเองเลย\n\nเติมเงินก่อนนะคะ 💕`
     );
     return;
   }
@@ -475,13 +475,13 @@ export async function executeGeneration(
   );
 
   if (!spent) {
-    await replyText(replyToken, "ชำระเงินล้มเหลว ลองใหม่อีกครั้ง");
+    await replyText(replyToken, "😅 หักเงินไม่ผ่านค่ะ ลองใหม่อีกทีนะคะ~");
     return;
   }
 
   await replyText(
     replyToken,
-    `กำลังสร้างด้วย ${model.label}... (-${model.creditCost} THB)`
+    `🌸 น้องชบากำลังสร้างให้อยู่นะคะ~\n✨ ${model.label}\n💸 หักไป ${model.creditCost} บาท รอแป๊บนึงน้า!`
   );
 
   try {
@@ -493,7 +493,7 @@ export async function executeGeneration(
     await dbService.refund(userId, model.creditCost, `Refund: task creation failed`);
     await pushText(
       userId,
-      `สร้างไม่สำเร็จ คืนเงิน ${model.creditCost} THB`
+      `😢 สร้างไม่สำเร็จเลยค่ะ คืนเงิน ${model.creditCost} บาทให้แล้วนะคะ~`
     );
   }
 }

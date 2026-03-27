@@ -69,7 +69,7 @@ export async function kieaiCallbackHandler(
 
       await pushText(
         task.user_id,
-        `Generation failed: ${errMsg}\nYour balance has been refunded.`
+        `😢 โอ๊ยยย! สร้างไม่สำเร็จเลยค่ะ\n⚠️ ${errMsg}\n💰 คืนเงิน ${model?.creditCost ?? ""} บาทให้แล้วนะคะ ไม่ต้องกังวล~`
       );
       return;
     }
@@ -167,7 +167,7 @@ export async function kieaiCallbackHandler(
 
       await pushText(
         task.user_id,
-        "Generation completed but no result was returned.\nYour balance has been refunded."
+        `🥺 สร้างเสร็จแล้วแต่ไม่มีผลลัพธ์กลับมาเลยค่ะ\n💰 คืนเงินให้แล้วนะคะ ลองใหม่ได้เลย~`
       );
       return;
     }
@@ -200,7 +200,7 @@ export async function kieaiCallbackHandler(
     const balance = await dbService.getBalance(task.user_id);
     await pushText(
       task.user_id,
-      `Done! (${model?.label || task.model})\nBalance: ${balance.toFixed(2)} THB`
+      `✅ เสร็จแล้วค่า! (${model?.label || task.model})\n💰 ยอดเงินคงเหลือ: ${balance.toFixed(2)} บาท`
     );
 
     // Send receipt request button
