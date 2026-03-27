@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "\u{1F33A} Chaba AI Dashboard",
+  title: "Chaba AI Dashboard",
   description: "Admin Dashboard for Chaba AI Bot",
 };
 

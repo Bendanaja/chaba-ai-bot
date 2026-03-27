@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import {
   Table,
@@ -24,7 +27,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ArrowLeft, ArrowRight } from "lucide-react";
+import {
+  Search,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  RotateCcw,
+  Wallet,
+} from "lucide-react";
 
 interface Transaction {
   id: number;
@@ -51,17 +62,59 @@ const TYPE_OPTIONS = [
   { value: "refund", label: "คืนเงิน" },
 ];
 
+function typeIcon(type: string) {
+  switch (type) {
+    case "topup":
+      return <ArrowUpCircle className="h-4 w-4 text-emerald-500" />;
+    case "spend":
+      return <ArrowDownCircle className="h-4 w-4 text-[#D63384]" />;
+    case "refund":
+      return <RotateCcw className="h-4 w-4 text-blue-500" />;
+    default:
+      return null;
+  }
+}
+
 function typeBadge(type: string) {
   switch (type) {
     case "topup":
-      return <Badge className="bg-emerald-100 text-emerald-700 border-0">topup</Badge>;
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 border-0 dark:bg-emerald-900/30 dark:text-emerald-300">
+          <ArrowUpCircle className="mr-1 h-3 w-3" />
+          เติมเงิน
+        </Badge>
+      );
     case "spend":
-      return <Badge className="bg-[#D63384]/10 text-[#D63384] border-0">spend</Badge>;
+      return (
+        <Badge className="bg-[#D63384]/10 text-[#D63384] border-0">
+          <ArrowDownCircle className="mr-1 h-3 w-3" />
+          ใช้จ่าย
+        </Badge>
+      );
     case "refund":
-      return <Badge className="bg-blue-100 text-blue-700 border-0">refund</Badge>;
+      return (
+        <Badge className="bg-blue-100 text-blue-700 border-0 dark:bg-blue-900/30 dark:text-blue-300">
+          <RotateCcw className="mr-1 h-3 w-3" />
+          คืนเงิน
+        </Badge>
+      );
     default:
       return <Badge variant="secondary">{type}</Badge>;
   }
+}
+
+function amountDisplay(type: string, amount: number) {
+  const prefix = type === "topup" || type === "refund" ? "+" : "-";
+  const color =
+    type === "topup" || type === "refund"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-[#D63384]";
+  return (
+    <span className={`font-mono font-bold ${color}`}>
+      {prefix}
+      {amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+    </span>
+  );
 }
 
 export default function TransactionsPage() {
@@ -110,17 +163,84 @@ export default function TransactionsPage() {
   }, [fetchTransactions]);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold">รายการธุรกรรม</h1>
-        <p className="text-sm text-muted-foreground">
-          ประวัติการเติมเงิน ใช้จ่าย และคืนเงิน
-        </p>
+    <div className="flex flex-col gap-6 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#D63384]/10 to-[#C8A951]/10">
+          <Wallet className="h-5 w-5 text-[#D63384]" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">รายการธุรกรรม</h1>
+          <p className="text-sm text-muted-foreground">
+            ประวัติการเติมเงิน ใช้จ่าย และคืนเงิน
+          </p>
+        </div>
+      </div>
+
+      {/* Summary stat cards */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card>
+          <CardContent className="flex items-center gap-3 px-4 py-3">
+            <div className="rounded-lg bg-emerald-100 p-2 dark:bg-emerald-900/30">
+              <ArrowUpCircle className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">เติมเงิน</p>
+              <p className="text-sm font-bold text-emerald-600">
+                +
+                {transactions
+                  .filter((t) => t.type === "topup")
+                  .reduce((s, t) => s + t.amount, 0)
+                  .toLocaleString()}{" "}
+                THB
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 px-4 py-3">
+            <div className="rounded-lg bg-[#D63384]/10 p-2">
+              <ArrowDownCircle className="h-4 w-4 text-[#D63384]" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">ใช้จ่าย</p>
+              <p className="text-sm font-bold text-[#D63384]">
+                -
+                {transactions
+                  .filter((t) => t.type === "spend")
+                  .reduce((s, t) => s + t.amount, 0)
+                  .toLocaleString()}{" "}
+                THB
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 px-4 py-3">
+            <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
+              <RotateCcw className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">คืนเงิน</p>
+              <p className="text-sm font-bold text-blue-600">
+                +
+                {transactions
+                  .filter((t) => t.type === "refund")
+                  .reduce((s, t) => s + t.amount, 0)
+                  .toLocaleString()}{" "}
+                THB
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "all")}>
+        <Select
+          value={typeFilter}
+          onValueChange={(v) => setTypeFilter(v ?? "all")}
+        >
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="ประเภท" />
           </SelectTrigger>
@@ -138,8 +258,11 @@ export default function TransactionsPage() {
             placeholder="ค้นหา User ID..."
             value={userIdSearch}
             onChange={(e) => setUserIdSearch(e.target.value)}
-            className="pl-9 w-[200px]"
+            className="pl-9 w-[220px]"
           />
+        </div>
+        <div className="ml-auto text-sm text-muted-foreground">
+          {pagination.total.toLocaleString()} รายการ
         </div>
       </div>
 
@@ -149,10 +272,10 @@ export default function TransactionsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead className="w-[60px]">ID</TableHead>
                 <TableHead>ผู้ใช้</TableHead>
                 <TableHead>ประเภท</TableHead>
-                <TableHead>จำนวน</TableHead>
+                <TableHead className="text-right">จำนวน</TableHead>
                 <TableHead>รายละเอียด</TableHead>
                 <TableHead>วันที่</TableHead>
               </TableRow>
@@ -160,34 +283,62 @@ export default function TransactionsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Loading...
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-12 text-muted-foreground"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      กำลังโหลด...
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : transactions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-12 text-muted-foreground"
+                  >
+                    <Wallet className="mx-auto mb-2 h-8 w-8 opacity-40" />
                     ไม่พบรายการ
                   </TableCell>
                 </TableRow>
               ) : (
-                transactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell className="font-mono text-xs">{tx.id}</TableCell>
+                transactions.map((tx, i) => (
+                  <TableRow
+                    key={tx.id}
+                    className="group transition-colors"
+                    style={{ animationDelay: `${i * 20}ms` }}
+                  >
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {tx.id}
+                    </TableCell>
                     <TableCell>
-                      <div className="flex flex-col">
-                        <span className="text-sm">{tx.display_name || "-"}</span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {tx.user_id.slice(0, 8)}...
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                          {(tx.display_name || "?").charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">
+                            {tx.display_name || "-"}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {tx.user_id.slice(0, 10)}...
+                          </span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>{typeBadge(tx.type)}</TableCell>
-                    <TableCell className="font-medium">
-                      {tx.amount.toLocaleString()} THB
+                    <TableCell className="text-right">
+                      {amountDisplay(tx.type, tx.amount)}
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        THB
+                      </span>
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                      {tx.description || "-"}
+                    <TableCell className="max-w-[220px]">
+                      <span className="truncate block text-xs text-muted-foreground">
+                        {tx.description || "-"}
+                      </span>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {new Date(tx.created_at).toLocaleDateString("th-TH", {
@@ -210,7 +361,8 @@ export default function TransactionsPage() {
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            ทั้งหมด {pagination.total.toLocaleString()} รายการ
+            หน้า {pagination.page} จาก {pagination.totalPages} (
+            {pagination.total.toLocaleString()} รายการ)
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -222,9 +374,35 @@ export default function TransactionsPage() {
               <ArrowLeft className="mr-1 h-4 w-4" />
               ก่อนหน้า
             </Button>
-            <span className="text-sm text-muted-foreground">
-              {pagination.page} / {pagination.totalPages}
-            </span>
+            <div className="flex items-center gap-1">
+              {Array.from(
+                { length: Math.min(5, pagination.totalPages) },
+                (_, i) => {
+                  let pageNum: number;
+                  if (pagination.totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (pagination.page <= 3) {
+                    pageNum = i + 1;
+                  } else if (pagination.page >= pagination.totalPages - 2) {
+                    pageNum = pagination.totalPages - 4 + i;
+                  } else {
+                    pageNum = pagination.page - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={
+                        pageNum === pagination.page ? "default" : "ghost"
+                      }
+                      size="icon-xs"
+                      onClick={() => fetchTransactions(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                }
+              )}
+            </div>
             <Button
               variant="outline"
               size="sm"

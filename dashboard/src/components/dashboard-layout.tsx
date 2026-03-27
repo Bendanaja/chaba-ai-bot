@@ -30,12 +30,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main area */}
       <div className="flex flex-1 flex-col md:ml-[260px]">
         {/* Mobile top bar */}
-        <header className="flex items-center justify-between border-b bg-white px-4 py-3 md:hidden">
+        <header className="mobile-header-glass flex items-center justify-between px-4 py-3 md:hidden">
           <Sheet>
             <SheetTrigger
               render={<Button variant="ghost" size="icon" />}
             >
-              <Menu className="size-5" />
+              <Menu className="size-5 text-chaba-pink" />
             </SheetTrigger>
             <SheetContent side="left" className="w-[260px] p-0" showCloseButton={false}>
               <SheetTitle className="sr-only">Navigation</SheetTitle>
@@ -44,18 +44,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </SheetContent>
           </Sheet>
 
-          <span className="text-base font-semibold text-primary">
-            {"\u{1F33A}"} Chaba AI
+          <span className="text-base font-semibold bg-gradient-to-r from-chaba-pink to-chaba-purple bg-clip-text text-transparent">
+            Chaba AI
           </span>
 
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            className="text-muted-foreground hover:text-chaba-pink transition-colors"
+          >
             <LogOut className="size-5" />
           </Button>
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="mx-auto max-w-7xl">{children}</div>
+        <main className="flex-1 overflow-y-auto chaba-scrollbar content-bg p-4 md:p-8">
+          <div className="mx-auto max-w-7xl page-enter">{children}</div>
         </main>
       </div>
     </div>

@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import {
   Table,
@@ -16,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -23,7 +27,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ExternalLink,
+  Sparkles,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Search,
+  Cpu,
+} from "lucide-react";
 
 interface Task {
   task_id: string;
@@ -55,13 +70,33 @@ const STATUS_OPTIONS = [
 function statusBadge(status: string) {
   switch (status) {
     case "completed":
-      return <Badge className="bg-emerald-100 text-emerald-700 border-0">สำเร็จ</Badge>;
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 border-0 dark:bg-emerald-900/30 dark:text-emerald-300">
+          <CheckCircle2 className="mr-1 h-3 w-3" />
+          สำเร็จ
+        </Badge>
+      );
     case "pending":
-      return <Badge className="bg-yellow-100 text-yellow-700 border-0">รอ</Badge>;
+      return (
+        <Badge className="bg-amber-100 text-amber-700 border-0 dark:bg-amber-900/30 dark:text-amber-300">
+          <Clock className="mr-1 h-3 w-3" />
+          รอดำเนินการ
+        </Badge>
+      );
     case "processing":
-      return <Badge className="bg-blue-100 text-blue-700 border-0">กำลังทำ</Badge>;
+      return (
+        <Badge className="bg-blue-100 text-blue-700 border-0 dark:bg-blue-900/30 dark:text-blue-300">
+          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          กำลังทำ
+        </Badge>
+      );
     case "failed":
-      return <Badge className="bg-red-100 text-red-700 border-0">ล้มเหลว</Badge>;
+      return (
+        <Badge className="bg-red-100 text-red-600 border-0 dark:bg-red-900/30 dark:text-red-300">
+          <XCircle className="mr-1 h-3 w-3" />
+          ล้มเหลว
+        </Badge>
+      );
     default:
       return <Badge variant="secondary">{status}</Badge>;
   }
@@ -76,6 +111,7 @@ export default function TasksPage() {
     totalPages: 0,
   });
   const [statusFilter, setStatusFilter] = useState("all");
+  const [modelSearch, setModelSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -88,6 +124,7 @@ export default function TasksPage() {
           limit: "20",
         });
         if (statusFilter !== "all") params.set("status", statusFilter);
+        if (modelSearch) params.set("model", modelSearch);
 
         const res = await fetch(`/api/tasks?${params}`);
         if (res.status === 401) {
@@ -103,25 +140,83 @@ export default function TasksPage() {
         setLoading(false);
       }
     },
-    [router, statusFilter]
+    [router, statusFilter, modelSearch]
   );
 
   useEffect(() => {
     fetchTasks(1);
   }, [fetchTasks]);
 
+  const completedCount = tasks.filter((t) => t.status === "completed").length;
+  const failedCount = tasks.filter((t) => t.status === "failed").length;
+  const pendingCount = tasks.filter(
+    (t) => t.status === "pending" || t.status === "processing"
+  ).length;
+
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold">งานทั้งหมด</h1>
-        <p className="text-sm text-muted-foreground">
-          ประวัติการสร้างงาน AI
-        </p>
+    <div className="flex flex-col gap-6 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#D63384]/10 to-[#C8A951]/10">
+          <Sparkles className="h-5 w-5 text-[#D63384]" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">งาน AI ทั้งหมด</h1>
+          <p className="text-sm text-muted-foreground">
+            ประวัติการสร้างงาน AI ทุกโมเดล
+          </p>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card>
+          <CardContent className="flex items-center gap-3 px-4 py-3">
+            <div className="rounded-lg bg-emerald-100 p-2 dark:bg-emerald-900/30">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">สำเร็จ</p>
+              <p className="text-sm font-bold text-emerald-600">
+                {completedCount} งาน
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 px-4 py-3">
+            <div className="rounded-lg bg-amber-100 p-2 dark:bg-amber-900/30">
+              <Clock className="h-4 w-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">กำลังดำเนินการ</p>
+              <p className="text-sm font-bold text-amber-600">
+                {pendingCount} งาน
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 px-4 py-3">
+            <div className="rounded-lg bg-red-100 p-2 dark:bg-red-900/30">
+              <XCircle className="h-4 w-4 text-red-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">ล้มเหลว</p>
+              <p className="text-sm font-bold text-red-600">
+                {failedCount} งาน
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v ?? "all")}
+        >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="สถานะ" />
           </SelectTrigger>
@@ -133,6 +228,18 @@ export default function TasksPage() {
             ))}
           </SelectContent>
         </Select>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="ค้นหาโมเดล..."
+            value={modelSearch}
+            onChange={(e) => setModelSearch(e.target.value)}
+            className="pl-9 w-[200px]"
+          />
+        </div>
+        <div className="ml-auto text-sm text-muted-foreground">
+          {pagination.total.toLocaleString()} งาน
+        </div>
       </div>
 
       {/* Table */}
@@ -141,52 +248,84 @@ export default function TasksPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Task ID</TableHead>
+                <TableHead className="w-[100px]">Task ID</TableHead>
                 <TableHead>ผู้ใช้</TableHead>
                 <TableHead>โมเดล</TableHead>
-                <TableHead>Prompt</TableHead>
+                <TableHead className="max-w-[250px]">Prompt</TableHead>
                 <TableHead>สถานะ</TableHead>
                 <TableHead>วันที่</TableHead>
-                <TableHead>ผลลัพธ์</TableHead>
+                <TableHead className="w-[60px]">ผลลัพธ์</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Loading...
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-12 text-muted-foreground"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      กำลังโหลด...
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-12 text-muted-foreground"
+                  >
+                    <Sparkles className="mx-auto mb-2 h-8 w-8 opacity-40" />
                     ไม่พบงาน
                   </TableCell>
                 </TableRow>
               ) : (
-                tasks.map((task) => (
-                  <TableRow key={task.task_id}>
-                    <TableCell className="font-mono text-xs">
+                tasks.map((task, i) => (
+                  <TableRow
+                    key={task.task_id}
+                    className="group transition-colors"
+                    style={{ animationDelay: `${i * 20}ms` }}
+                  >
+                    <TableCell className="font-mono text-xs text-muted-foreground">
                       {task.task_id.slice(0, 8)}...
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col">
-                        <span className="text-sm">{task.display_name || "-"}</span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {task.user_id.slice(0, 8)}...
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                          {(task.display_name || "?").charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">
+                            {task.display_name || "-"}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {task.user_id.slice(0, 10)}...
+                          </span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium">
+                          {task.model.length > 20
+                            ? task.model.slice(0, 20) + "..."
+                            : task.model}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs">{task.model}</TableCell>
-                    <TableCell
-                      className="max-w-[200px] truncate text-xs text-muted-foreground"
-                      title={task.prompt || ""}
-                    >
-                      {task.prompt
-                        ? task.prompt.length > 50
-                          ? task.prompt.slice(0, 50) + "..."
-                          : task.prompt
-                        : "-"}
+                    <TableCell className="max-w-[250px]">
+                      <span
+                        className="block truncate text-xs text-muted-foreground"
+                        title={task.prompt || ""}
+                      >
+                        {task.prompt
+                          ? task.prompt.length > 60
+                            ? task.prompt.slice(0, 60) + "..."
+                            : task.prompt
+                          : "-"}
+                      </span>
                     </TableCell>
                     <TableCell>{statusBadge(task.status)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
@@ -204,7 +343,7 @@ export default function TasksPage() {
                           href={task.result_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-[#D63384] hover:underline"
+                          className="inline-flex items-center gap-1 rounded-md bg-[#D63384]/10 px-2 py-1 text-xs font-medium text-[#D63384] transition-colors hover:bg-[#D63384]/20"
                         >
                           <ExternalLink className="h-3 w-3" />
                           ดู
@@ -225,7 +364,8 @@ export default function TasksPage() {
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            ทั้งหมด {pagination.total.toLocaleString()} รายการ
+            หน้า {pagination.page} จาก {pagination.totalPages} (
+            {pagination.total.toLocaleString()} งาน)
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -237,9 +377,35 @@ export default function TasksPage() {
               <ArrowLeft className="mr-1 h-4 w-4" />
               ก่อนหน้า
             </Button>
-            <span className="text-sm text-muted-foreground">
-              {pagination.page} / {pagination.totalPages}
-            </span>
+            <div className="flex items-center gap-1">
+              {Array.from(
+                { length: Math.min(5, pagination.totalPages) },
+                (_, i) => {
+                  let pageNum: number;
+                  if (pagination.totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (pagination.page <= 3) {
+                    pageNum = i + 1;
+                  } else if (pagination.page >= pagination.totalPages - 2) {
+                    pageNum = pagination.totalPages - 4 + i;
+                  } else {
+                    pageNum = pagination.page - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={
+                        pageNum === pagination.page ? "default" : "ghost"
+                      }
+                      size="icon-xs"
+                      onClick={() => fetchTasks(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                }
+              )}
+            </div>
             <Button
               variant="outline"
               size="sm"

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import {
   Table,
@@ -29,7 +30,16 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search, Plus, ArrowLeft, ArrowRight } from "lucide-react";
+import {
+  Search,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  Wallet,
+  Loader2,
+  UserCircle,
+} from "lucide-react";
 
 interface User {
   user_id: string;
@@ -62,6 +72,8 @@ export default function UsersPage() {
   const [topupAmount, setTopupAmount] = useState("");
   const [topupOpen, setTopupOpen] = useState(false);
   const [topupLoading, setTopupLoading] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
   const fetchUsers = useCallback(
@@ -92,8 +104,22 @@ export default function UsersPage() {
   );
 
   useEffect(() => {
-    fetchUsers(1, search);
-  }, [fetchUsers, search]);
+    fetchUsers(1, "");
+  }, [fetchUsers]);
+
+  useEffect(() => {
+    if (!loading) {
+      requestAnimationFrame(() => setVisible(true));
+    }
+  }, [loading]);
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchUsers(1, value);
+    }, 400);
+  }
 
   async function handleTopup() {
     if (!topupUserId || !topupAmount) return;
@@ -122,41 +148,86 @@ export default function UsersPage() {
 
   function balanceBadge(balance: number) {
     if (balance > 100)
-      return <Badge className="bg-emerald-100 text-emerald-700 border-0">{balance.toLocaleString()} THB</Badge>;
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 border-0 font-medium">
+          {balance.toLocaleString()} THB
+        </Badge>
+      );
     if (balance > 0)
-      return <Badge className="bg-yellow-100 text-yellow-700 border-0">{balance.toLocaleString()} THB</Badge>;
-    return <Badge className="bg-gray-100 text-gray-500 border-0">{balance.toLocaleString()} THB</Badge>;
+      return (
+        <Badge className="bg-amber-100 text-amber-700 border-0 font-medium">
+          {balance.toLocaleString()} THB
+        </Badge>
+      );
+    return (
+      <Badge className="bg-gray-100 text-gray-500 border-0 font-medium">
+        {balance.toLocaleString()} THB
+      </Badge>
+    );
   }
 
+  const quickAmounts = [50, 100, 500, 1000];
+
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold">ผู้ใช้</h1>
-        <p className="text-sm text-muted-foreground">
+    <div className="flex flex-col gap-6">
+      {/* Page header */}
+      <div
+        className="transition-all duration-500"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(12px)",
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <Users className="h-6 w-6 text-chaba-pink" />
+          <h1 className="text-2xl font-bold">ผู้ใช้</h1>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">
           จัดการผู้ใช้ทั้งหมดในระบบ
         </p>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
+      {/* Search bar */}
+      <div
+        className="relative max-w-md transition-all duration-500"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(12px)",
+          transitionDelay: "100ms",
+        }}
+      >
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="ค้นหาผู้ใช้..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="pl-9 bg-white/80"
         />
       </div>
 
-      {/* Table */}
-      <Card>
+      {/* Users table */}
+      <Card className="glass-card card-enter overflow-hidden" style={{ animationDelay: "0.15s" }}>
+        <CardHeader className="border-b bg-muted/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <UserCircle className="h-4 w-4 text-chaba-pink" />
+                รายชื่อผู้ใช้
+              </CardTitle>
+              <CardDescription>
+                ทั้งหมด {pagination.total.toLocaleString()} คน
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/20 hover:bg-muted/20">
                 <TableHead>User ID</TableHead>
                 <TableHead>ชื่อ</TableHead>
                 <TableHead>ยอดเงิน</TableHead>
+                <TableHead>Model</TableHead>
                 <TableHead>Tasks</TableHead>
                 <TableHead>สร้างเมื่อ</TableHead>
                 <TableHead className="text-right">เติมเงิน</TableHead>
@@ -165,27 +236,54 @@ export default function UsersPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Loading...
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-12"
+                  >
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Loading...</span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-12 text-muted-foreground"
+                  >
                     ไม่พบผู้ใช้
                   </TableCell>
                 </TableRow>
               ) : (
                 users.map((user) => (
-                  <TableRow key={user.user_id}>
-                    <TableCell className="font-mono text-xs">
-                      {user.user_id.slice(0, 8)}...
+                  <TableRow
+                    key={user.user_id}
+                    className="group transition-colors hover:bg-chaba-pink/[0.03]"
+                  >
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {user.user_id.slice(0, 10)}...
                     </TableCell>
-                    <TableCell>{user.display_name || "-"}</TableCell>
+                    <TableCell className="font-medium">
+                      {user.display_name || (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell>{balanceBadge(user.balance)}</TableCell>
-                    <TableCell>{user.task_count}</TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center rounded-md bg-chaba-purple/10 px-2 py-0.5 text-xs font-medium text-chaba-purple">
+                        {user.selected_model}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium">{user.task_count.toLocaleString()}</span>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString("th-TH")}
+                      {new Date(user.created_at).toLocaleDateString("th-TH", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <Dialog
@@ -200,20 +298,30 @@ export default function UsersPage() {
                       >
                         <DialogTrigger
                           render={
-                            <Button variant="outline" size="sm" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="opacity-60 group-hover:opacity-100 transition-opacity hover:border-chaba-pink/30 hover:text-chaba-pink"
+                            />
                           }
                         >
-                          <Plus className="mr-1 h-3 w-3" />
+                          <Wallet className="mr-1 h-3 w-3" />
                           เติมเงิน
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>เติมเงิน</DialogTitle>
+                            <DialogTitle className="flex items-center gap-2">
+                              <Wallet className="h-4 w-4 text-chaba-pink" />
+                              เติมเงิน
+                            </DialogTitle>
                             <DialogDescription>
-                              เติมเงินให้ {user.display_name || user.user_id.slice(0, 8)}
+                              เติมเงินให้{" "}
+                              <span className="font-medium text-foreground">
+                                {user.display_name || user.user_id.slice(0, 10)}
+                              </span>
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="flex flex-col gap-3 py-2">
+                          <div className="flex flex-col gap-4 py-2">
                             <div className="flex flex-col gap-2">
                               <Label htmlFor="topup-amount">จำนวนเงิน (THB)</Label>
                               <Input
@@ -226,14 +334,40 @@ export default function UsersPage() {
                                 onChange={(e) => setTopupAmount(e.target.value)}
                               />
                             </div>
+                            <div className="flex flex-wrap gap-2">
+                              {quickAmounts.map((amt) => (
+                                <button
+                                  key={amt}
+                                  type="button"
+                                  onClick={() => setTopupAmount(String(amt))}
+                                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                                    topupAmount === String(amt)
+                                      ? "border-chaba-pink bg-chaba-pink/10 text-chaba-pink"
+                                      : "border-border text-muted-foreground hover:border-chaba-pink/30 hover:text-chaba-pink"
+                                  }`}
+                                >
+                                  +{amt.toLocaleString()}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                           <DialogFooter>
                             <Button
                               onClick={handleTopup}
                               disabled={topupLoading || !topupAmount}
-                              className="bg-gradient-to-r from-[#D63384] to-[#6C5CE7] text-white"
+                              className="btn-chaba text-white shadow-md"
                             >
-                              {topupLoading ? "กำลังเติม..." : "เติมเงิน"}
+                              {topupLoading ? (
+                                <>
+                                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                  กำลังเติม...
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="mr-1 h-3 w-3" />
+                                  เติมเงิน
+                                </>
+                              )}
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -249,31 +383,62 @@ export default function UsersPage() {
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div
+          className="flex items-center justify-between transition-all duration-500"
+          style={{
+            opacity: visible ? 1 : 0,
+            transitionDelay: "400ms",
+          }}
+        >
           <p className="text-sm text-muted-foreground">
-            ทั้งหมด {pagination.total.toLocaleString()} รายการ
+            หน้า {pagination.page} จาก {pagination.totalPages}
+            {" "}({pagination.total.toLocaleString()} รายการ)
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Button
               variant="outline"
               size="sm"
               disabled={pagination.page <= 1}
               onClick={() => fetchUsers(pagination.page - 1, search)}
+              className="hover:border-[#D63384]/30 hover:text-[#D63384]"
             >
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              ก่อนหน้า
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm text-muted-foreground">
-              {pagination.page} / {pagination.totalPages}
-            </span>
+            {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
+              let pageNum: number;
+              if (pagination.totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (pagination.page <= 3) {
+                pageNum = i + 1;
+              } else if (pagination.page >= pagination.totalPages - 2) {
+                pageNum = pagination.totalPages - 4 + i;
+              } else {
+                pageNum = pagination.page - 2 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={pagination.page === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => fetchUsers(pageNum, search)}
+                  className={
+                    pagination.page === pageNum
+                      ? "bg-gradient-to-r from-[#D63384] to-[#6C5CE7] text-white border-0"
+                      : "hover:border-[#D63384]/30 hover:text-[#D63384]"
+                  }
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
             <Button
               variant="outline"
               size="sm"
               disabled={pagination.page >= pagination.totalPages}
               onClick={() => fetchUsers(pagination.page + 1, search)}
+              className="hover:border-[#D63384]/30 hover:text-[#D63384]"
             >
-              ถัดไป
-              <ArrowRight className="ml-1 h-4 w-4" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
