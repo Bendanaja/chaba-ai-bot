@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden chaba-scrollbar p-4 md:px-8 md:py-4">
-          <div className="mx-auto max-w-7xl page-enter min-w-0">{children}</div>
+          <div className="page-enter min-w-0">{children}</div>
         </main>
       </div>
     </div>
