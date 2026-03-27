@@ -163,11 +163,21 @@ export async function getGpt4oTaskStatus(
 
 // ==================== File Upload ====================
 
+// File upload uses a DIFFERENT base URL than the main API
+const fileApi = axios.create({
+  baseURL: config.kieai.fileUploadUrl,
+  headers: {
+    Authorization: `Bearer ${config.kieai.apiKey}`,
+    "Content-Type": "application/json",
+  },
+  timeout: 60000, // longer timeout for file uploads
+});
+
 export async function uploadImageBase64(
   base64Data: string,
   fileName?: string
 ): Promise<string> {
-  const { data } = await api.post<FileUploadResponse>(
+  const { data } = await fileApi.post<FileUploadResponse>(
     "/api/file-base64-upload",
     {
       base64Data,
@@ -183,7 +193,7 @@ export async function uploadImageBase64(
 }
 
 export async function uploadImageUrl(url: string): Promise<string> {
-  const { data } = await api.post<FileUploadResponse>(
+  const { data } = await fileApi.post<FileUploadResponse>(
     "/api/file-url-upload",
     {
       fileUrl: url,

@@ -71,23 +71,39 @@ export async function kieaiCallbackHandler(
       // GPT-4o callback: data.info.result_urls
       resultUrls = body.data?.info?.result_urls || [];
     } else if (task.api_type === "suno") {
-      // Suno music: poll for sunoData array (retry up to 3 times with delay)
-      for (let attempt = 0; attempt < 3 && resultUrls.length === 0; attempt++) {
-        if (attempt > 0) await new Promise(r => setTimeout(r, 5000));
-        try {
-          const sunoStatus = await kieai.getSunoTaskStatus(taskId);
-          console.log("Suno status attempt", attempt + 1, JSON.stringify(sunoStatus));
-          const sunoData = sunoStatus?.response?.sunoData;
-          if (sunoData && sunoData.length > 0) {
-            for (const track of sunoData) {
-              if (track.audioUrl) {
-                resultUrls.push(track.audioUrl);
-                audioDuration = Math.max(audioDuration, (track.duration || 0) * 1000);
+      // Suno callback includes audio data directly (snake_case fields)
+      // Format: { data: { data: [{ audio_url, image_url, title, duration }] } }
+      const sunoTracks = body.data?.data;
+      if (Array.isArray(sunoTracks)) {
+        for (const track of sunoTracks) {
+          const url = track.audio_url || track.audioUrl;
+          if (url) {
+            resultUrls.push(url);
+            audioDuration = Math.max(audioDuration, (track.duration || 0) * 1000);
+          }
+        }
+      }
+
+      // Fallback: poll if callback didn't include data
+      if (resultUrls.length === 0) {
+        for (let attempt = 0; attempt < 3 && resultUrls.length === 0; attempt++) {
+          if (attempt > 0) await new Promise(r => setTimeout(r, 5000));
+          try {
+            const sunoStatus = await kieai.getSunoTaskStatus(taskId);
+            console.log("Suno poll attempt", attempt + 1, JSON.stringify(sunoStatus));
+            const sunoData = sunoStatus?.response?.sunoData;
+            if (sunoData && sunoData.length > 0) {
+              for (const track of sunoData) {
+                const url = (track as any).audio_url || track.audioUrl;
+                if (url) {
+                  resultUrls.push(url);
+                  audioDuration = Math.max(audioDuration, (track.duration || 0) * 1000);
+                }
               }
             }
+          } catch (err) {
+            console.error("Suno poll error:", err);
           }
-        } catch (err) {
-          console.error("Suno status poll error (attempt " + (attempt + 1) + "):", err);
         }
       }
     } else if (task.api_type === "market") {

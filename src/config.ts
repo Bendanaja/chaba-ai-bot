@@ -17,7 +17,7 @@ export const config = {
     apiKey: required("KIEAI_API_KEY"),
     callbackBaseUrl: required("KIEAI_CALLBACK_BASE_URL"),
     baseUrl: "https://api.kie.ai",
-    fileUploadUrl: "https://api.kie.ai",
+    fileUploadUrl: "https://kieai.redpandaai.co",
   },
   port: parseInt(process.env["PORT"] || "3000", 10),
 } as const;
