@@ -31,7 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Main area */}
-      <div className="flex flex-1 flex-col md:ml-[260px] main-gradient-bg">
+      <div className="flex flex-1 flex-col min-w-0 md:ml-[260px] main-gradient-bg">
         {/* Mobile top bar */}
         <header className="mobile-header-glass flex items-center justify-between px-4 py-3 md:hidden">
           <Sheet>
@@ -88,8 +88,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto chaba-scrollbar p-4 md:px-8 md:py-4">
-          <div className="mx-auto max-w-7xl page-enter">{children}</div>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden chaba-scrollbar p-4 md:px-8 md:py-4">
+          <div className="mx-auto max-w-7xl page-enter min-w-0">{children}</div>
         </main>
       </div>
     </div>

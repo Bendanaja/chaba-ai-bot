@@ -356,7 +356,7 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground truncate">
                   {card.title}
                 </p>
-                <p className="text-2xl font-bold tracking-tight">
+                <p className="text-xl font-bold tracking-tight truncate">
                   <CountUpNumber value={card.value} suffix={card.suffix} />
                 </p>
               </div>
