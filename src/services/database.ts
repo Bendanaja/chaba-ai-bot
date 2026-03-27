@@ -1,9 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseUrl = process.env.SUPABASE_URL || "http://72.61.112.117:3100";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+// Custom fetch: strip /rest/v1/ prefix because our PostgREST runs at root
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  global: {
+    fetch: (url, options) => {
+      const fixed = url.toString().replace("/rest/v1/", "/");
+      return fetch(fixed, options);
+    },
+  },
+});
 
 export interface User {
   user_id: string;
@@ -109,7 +117,6 @@ export async function topUp(
   amount: number,
   description?: string
 ): Promise<number> {
-  // Get current balance
   const { data: user } = await supabase
     .from("users")
     .select("balance")
@@ -298,24 +305,20 @@ export async function createInvoice(data: {
   const taxAmount = Math.round(subtotal * taxRate * 100) / 100;
   const total = Math.round((subtotal + taxAmount) * 100) / 100;
 
-  const row = {
-    invoice_number: invoiceNumber,
-    type: "receipt",
-    customer_name: data.customerName,
-    items: data.items,
-    subtotal,
-    tax_rate: taxRate,
-    tax_amount: taxAmount,
-    total,
-    status: "paid",
-    notes: data.notes || null,
-    user_id: data.userId,
-    task_id: data.taskId || null,
-  };
-
   const { data: inserted, error } = await supabase
     .from("invoices")
-    .insert(row)
+    .insert({
+      invoice_number: invoiceNumber,
+      type: "receipt",
+      customer_name: data.customerName,
+      items: data.items,
+      subtotal,
+      tax_rate: taxRate,
+      tax_amount: taxAmount,
+      total,
+      status: "paid",
+      notes: data.notes || null,
+    })
     .select("*")
     .single();
 
@@ -334,7 +337,6 @@ export async function getInvoicesByUser(
   const { data } = await supabase
     .from("invoices")
     .select("*")
-    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(limit);
 
