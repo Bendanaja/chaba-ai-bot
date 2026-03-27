@@ -336,7 +336,7 @@ export default function TransactionsPage() {
                           THB
                         </span>
                       </TableCell>
-                      <TableCell className="max-w-[220px]">
+                      <TableCell className="max-w-[220px] min-w-0">
                         <span className="truncate block text-xs text-muted-foreground">
                           {tx.description || "-"}
                         </span>
