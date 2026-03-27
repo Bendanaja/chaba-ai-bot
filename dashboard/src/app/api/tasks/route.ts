@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,53 +20,71 @@ export async function GET(request: NextRequest) {
     const model = searchParams.get("model") || "";
     const offset = (page - 1) * limit;
 
-    const conditions: string[] = [];
-    const queryParams: unknown[] = [];
+    // Count total
+    let countQuery = supabase
+      .from("tasks")
+      .select("*", { count: "exact", head: true });
 
     if (userId) {
-      conditions.push("t.user_id = ?");
-      queryParams.push(userId);
+      countQuery = countQuery.eq("user_id", userId);
     }
-
     if (status) {
-      conditions.push("t.status = ?");
-      queryParams.push(status);
+      countQuery = countQuery.eq("status", status);
     }
-
     if (model) {
-      conditions.push("t.model = ?");
-      queryParams.push(model);
+      countQuery = countQuery.eq("model", model);
     }
 
-    const whereClause =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const { count: total } = await countQuery;
 
-    // Count total
-    const countRow = db
-      .prepare(`SELECT COUNT(*) as count FROM tasks t ${whereClause}`)
-      .get(...queryParams) as { count: number };
+    // Get tasks
+    let tasksQuery = supabase
+      .from("tasks")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    // Get tasks with user display_name
-    const tasks = db
-      .prepare(
-        `SELECT
-          t.*,
-          u.display_name
-        FROM tasks t
-        LEFT JOIN users u ON t.user_id = u.user_id
-        ${whereClause}
-        ORDER BY t.created_at DESC
-        LIMIT ? OFFSET ?`
-      )
-      .all(...queryParams, limit, offset);
+    if (userId) {
+      tasksQuery = tasksQuery.eq("user_id", userId);
+    }
+    if (status) {
+      tasksQuery = tasksQuery.eq("status", status);
+    }
+    if (model) {
+      tasksQuery = tasksQuery.eq("model", model);
+    }
+
+    const { data: tasks } = await tasksQuery;
+
+    // Enrich with display_name
+    const userIds = [
+      ...new Set((tasks || []).map((t) => t.user_id).filter(Boolean)),
+    ];
+    let displayNameMap = new Map<string, string>();
+
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from("users")
+        .select("user_id, display_name")
+        .in("user_id", userIds);
+
+      for (const u of users || []) {
+        displayNameMap.set(u.user_id, u.display_name);
+      }
+    }
+
+    const enrichedTasks = (tasks || []).map((t) => ({
+      ...t,
+      display_name: displayNameMap.get(t.user_id) || null,
+    }));
 
     return NextResponse.json({
-      tasks,
+      tasks: enrichedTasks,
       pagination: {
         page,
         limit,
-        total: countRow.count,
-        totalPages: Math.ceil(countRow.count / limit),
+        total: total || 0,
+        totalPages: Math.ceil((total || 0) / limit),
       },
     });
   } catch (error) {

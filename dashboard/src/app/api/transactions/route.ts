@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -19,50 +19,65 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type") || "";
     const offset = (page - 1) * limit;
 
-    const conditions: string[] = [];
-    const queryParams: unknown[] = [];
+    // Count total
+    let countQuery = supabase
+      .from("transactions")
+      .select("*", { count: "exact", head: true });
 
     if (userId) {
-      conditions.push("t.user_id = ?");
-      queryParams.push(userId);
+      countQuery = countQuery.eq("user_id", userId);
     }
-
     if (type && ["topup", "spend", "refund"].includes(type)) {
-      conditions.push("t.type = ?");
-      queryParams.push(type);
+      countQuery = countQuery.eq("type", type);
     }
 
-    const whereClause =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const { count: total } = await countQuery;
 
-    // Count total
-    const countRow = db
-      .prepare(
-        `SELECT COUNT(*) as count FROM transactions t ${whereClause}`
-      )
-      .get(...queryParams) as { count: number };
+    // Get transactions
+    let txQuery = supabase
+      .from("transactions")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    // Get transactions with user display_name
-    const transactions = db
-      .prepare(
-        `SELECT
-          t.*,
-          u.display_name
-        FROM transactions t
-        LEFT JOIN users u ON t.user_id = u.user_id
-        ${whereClause}
-        ORDER BY t.created_at DESC
-        LIMIT ? OFFSET ?`
-      )
-      .all(...queryParams, limit, offset);
+    if (userId) {
+      txQuery = txQuery.eq("user_id", userId);
+    }
+    if (type && ["topup", "spend", "refund"].includes(type)) {
+      txQuery = txQuery.eq("type", type);
+    }
+
+    const { data: transactions } = await txQuery;
+
+    // Enrich with display_name
+    const userIds = [
+      ...new Set((transactions || []).map((t) => t.user_id).filter(Boolean)),
+    ];
+    let displayNameMap = new Map<string, string>();
+
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from("users")
+        .select("user_id, display_name")
+        .in("user_id", userIds);
+
+      for (const u of users || []) {
+        displayNameMap.set(u.user_id, u.display_name);
+      }
+    }
+
+    const enrichedTx = (transactions || []).map((t) => ({
+      ...t,
+      display_name: displayNameMap.get(t.user_id) || null,
+    }));
 
     return NextResponse.json({
-      transactions,
+      transactions: enrichedTx,
       pagination: {
         page,
         limit,
-        total: countRow.count,
-        totalPages: Math.ceil(countRow.count / limit),
+        total: total || 0,
+        totalPages: Math.ceil((total || 0) / limit),
       },
     });
   } catch (error) {

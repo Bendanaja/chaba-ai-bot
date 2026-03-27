@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -14,32 +14,35 @@ export async function GET(
   try {
     const { userId } = await params;
 
-    const user = db
-      .prepare(
-        `SELECT
-          u.*,
-          COALESCE(tc.task_count, 0) as task_count,
-          COALESCE(txc.tx_count, 0) as tx_count
-        FROM users u
-        LEFT JOIN (
-          SELECT user_id, COUNT(*) as task_count
-          FROM tasks
-          WHERE user_id = ?
-        ) tc ON u.user_id = tc.user_id
-        LEFT JOIN (
-          SELECT user_id, COUNT(*) as tx_count
-          FROM transactions
-          WHERE user_id = ?
-        ) txc ON u.user_id = txc.user_id
-        WHERE u.user_id = ?`
-      )
-      .get(userId, userId, userId);
+    const { data: user } = await supabase
+      .from("users")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ user });
+    // Get task count
+    const { count: taskCount } = await supabase
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    // Get transaction count
+    const { count: txCount } = await supabase
+      .from("transactions")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    return NextResponse.json({
+      user: {
+        ...user,
+        task_count: taskCount || 0,
+        tx_count: txCount || 0,
+      },
+    });
   } catch (error) {
     console.error("User detail error:", error);
     return NextResponse.json(
@@ -61,9 +64,11 @@ export async function PATCH(
     const body = await request.json();
 
     // Check user exists
-    const existing = db
-      .prepare("SELECT * FROM users WHERE user_id = ?")
-      .get(userId);
+    const { data: existing } = await supabase
+      .from("users")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
 
     if (!existing) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -71,33 +76,29 @@ export async function PATCH(
 
     // Build dynamic update
     const allowedFields = ["display_name", "selected_model", "balance"];
-    const updates: string[] = [];
-    const values: unknown[] = [];
+    const updateData: Record<string, unknown> = {};
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updates.push(`${field} = ?`);
-        values.push(body[field]);
+        updateData[field] = body[field];
       }
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
         { error: "No valid fields to update" },
         { status: 400 }
       );
     }
 
-    updates.push("updated_at = datetime('now')");
-    values.push(userId);
+    updateData.updated_at = new Date().toISOString();
 
-    db.prepare(
-      `UPDATE users SET ${updates.join(", ")} WHERE user_id = ?`
-    ).run(...values);
-
-    const updated = db
-      .prepare("SELECT * FROM users WHERE user_id = ?")
-      .get(userId);
+    const { data: updated } = await supabase
+      .from("users")
+      .update(updateData)
+      .eq("user_id", userId)
+      .select()
+      .single();
 
     return NextResponse.json({ user: updated });
   } catch (error) {

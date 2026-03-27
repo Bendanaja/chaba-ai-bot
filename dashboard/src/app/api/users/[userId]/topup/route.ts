@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 
 export async function POST(
   request: NextRequest,
@@ -22,30 +22,43 @@ export async function POST(
     }
 
     // Check user exists
-    const user = db
-      .prepare("SELECT * FROM users WHERE user_id = ?")
-      .get(userId) as { user_id: string; balance: number } | undefined;
+    const { data: user } = await supabase
+      .from("users")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Update balance and insert transaction in a single transaction
-    const topup = db.transaction(() => {
-      db.prepare(
-        "UPDATE users SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?"
-      ).run(amount, userId);
+    // Update balance
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        balance: user.balance + amount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
 
-      db.prepare(
-        "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, 'topup', ?, ?)"
-      ).run(userId, amount, description || `Top up ${amount} THB`);
+    if (updateError) throw updateError;
 
-      return db
-        .prepare("SELECT * FROM users WHERE user_id = ?")
-        .get(userId);
+    // Insert transaction
+    const { error: txError } = await supabase.from("transactions").insert({
+      user_id: userId,
+      type: "topup",
+      amount,
+      description: description || `Top up ${amount} THB`,
     });
 
-    const updated = topup();
+    if (txError) throw txError;
+
+    // Fetch updated user
+    const { data: updated } = await supabase
+      .from("users")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
 
     return NextResponse.json({ user: updated });
   } catch {

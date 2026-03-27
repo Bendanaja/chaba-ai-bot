@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -10,107 +10,117 @@ export async function GET(request: NextRequest) {
 
   try {
     // Total users
-    const totalUsersRow = db
-      .prepare("SELECT COUNT(*) as count FROM users")
-      .get() as { count: number };
+    const { count: totalUsers } = await supabase
+      .from("users")
+      .select("*", { count: "exact", head: true });
 
-    // Revenue (topup), Spent, Refunded
-    const revenueRow = db
-      .prepare(
-        "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'topup'"
-      )
-      .get() as { total: number };
+    // Revenue (topup)
+    const { data: topupRows } = await supabase
+      .from("transactions")
+      .select("amount")
+      .eq("type", "topup");
+    const totalRevenue = (topupRows || []).reduce((sum, r) => sum + (r.amount || 0), 0);
 
-    const spentRow = db
-      .prepare(
-        "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'spend'"
-      )
-      .get() as { total: number };
+    // Spent
+    const { data: spentRows } = await supabase
+      .from("transactions")
+      .select("amount")
+      .eq("type", "spend");
+    const totalSpent = (spentRows || []).reduce((sum, r) => sum + (r.amount || 0), 0);
 
-    const refundedRow = db
-      .prepare(
-        "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'refund'"
-      )
-      .get() as { total: number };
+    // Refunded
+    const { data: refundRows } = await supabase
+      .from("transactions")
+      .select("amount")
+      .eq("type", "refund");
+    const totalRefunded = (refundRows || []).reduce((sum, r) => sum + (r.amount || 0), 0);
 
     // Tasks stats
-    const totalTasksRow = db
-      .prepare("SELECT COUNT(*) as count FROM tasks")
-      .get() as { count: number };
+    const { count: totalTasks } = await supabase
+      .from("tasks")
+      .select("*", { count: "exact", head: true });
 
-    const activeTasksRow = db
-      .prepare(
-        "SELECT COUNT(*) as count FROM tasks WHERE status IN ('pending', 'processing')"
-      )
-      .get() as { count: number };
+    const { count: activeTasks } = await supabase
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .in("status", ["pending", "processing"]);
 
-    const successTasksRow = db
-      .prepare(
-        "SELECT COUNT(*) as count FROM tasks WHERE status = 'completed'"
-      )
-      .get() as { count: number };
+    const { count: successTasks } = await supabase
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "completed");
 
-    const failedTasksRow = db
-      .prepare(
-        "SELECT COUNT(*) as count FROM tasks WHERE status = 'failed'"
-      )
-      .get() as { count: number };
+    const { count: failedTasks } = await supabase
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "failed");
 
     // Today stats
-    const todayRevenueRow = db
-      .prepare(
-        "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'topup' AND date(created_at) = date('now')"
-      )
-      .get() as { total: number };
+    const todayStr = new Date().toISOString().split("T")[0];
+    const { data: todayTopupRows } = await supabase
+      .from("transactions")
+      .select("amount")
+      .eq("type", "topup")
+      .gte("created_at", `${todayStr}T00:00:00`)
+      .lt("created_at", `${todayStr}T23:59:59.999999`);
+    const todayRevenue = (todayTopupRows || []).reduce((sum, r) => sum + (r.amount || 0), 0);
 
-    const todayTasksRow = db
-      .prepare(
-        "SELECT COUNT(*) as count FROM tasks WHERE date(created_at) = date('now')"
-      )
-      .get() as { count: number };
+    const { count: todayTasks } = await supabase
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", `${todayStr}T00:00:00`)
+      .lt("created_at", `${todayStr}T23:59:59.999999`);
 
     // Daily stats for last 7 days
-    const dailyStats = db
-      .prepare(
-        `SELECT
-          date(created_at) as date,
-          COALESCE(SUM(CASE WHEN type = 'topup' THEN amount ELSE 0 END), 0) as revenue,
-          COALESCE(SUM(CASE WHEN type = 'spend' THEN amount ELSE 0 END), 0) as spent,
-          COUNT(*) as transactions
-        FROM transactions
-        WHERE created_at >= datetime('now', '-7 days')
-        GROUP BY date(created_at)
-        ORDER BY date(created_at) ASC`
-      )
-      .all() as Array<{
-      date: string;
-      revenue: number;
-      spent: number;
-      transactions: number;
-    }>;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const { data: recentTx } = await supabase
+      .from("transactions")
+      .select("created_at, type, amount")
+      .gte("created_at", sevenDaysAgo.toISOString())
+      .order("created_at", { ascending: true });
+
+    const dailyMap = new Map<string, { revenue: number; spent: number; transactions: number }>();
+    for (const tx of recentTx || []) {
+      const date = tx.created_at.split("T")[0];
+      if (!dailyMap.has(date)) {
+        dailyMap.set(date, { revenue: 0, spent: 0, transactions: 0 });
+      }
+      const day = dailyMap.get(date)!;
+      day.transactions++;
+      if (tx.type === "topup") day.revenue += tx.amount || 0;
+      if (tx.type === "spend") day.spent += tx.amount || 0;
+    }
+    const dailyStats = Array.from(dailyMap.entries())
+      .map(([date, stats]) => ({ date, ...stats }))
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     // Popular models (top 10)
-    const popularModels = db
-      .prepare(
-        `SELECT model, COUNT(*) as count
-        FROM tasks
-        GROUP BY model
-        ORDER BY count DESC
-        LIMIT 10`
-      )
-      .all() as Array<{ model: string; count: number }>;
+    const { data: allTasks } = await supabase
+      .from("tasks")
+      .select("model");
+    const modelCounts = new Map<string, number>();
+    for (const t of allTasks || []) {
+      if (t.model) {
+        modelCounts.set(t.model, (modelCounts.get(t.model) || 0) + 1);
+      }
+    }
+    const popularModels = Array.from(modelCounts.entries())
+      .map(([model, count]) => ({ model, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
 
     return NextResponse.json({
-      totalUsers: totalUsersRow.count,
-      totalRevenue: revenueRow.total,
-      totalSpent: spentRow.total,
-      totalRefunded: refundedRow.total,
-      activeTasks: activeTasksRow.count,
-      totalTasks: totalTasksRow.count,
-      successTasks: successTasksRow.count,
-      failedTasks: failedTasksRow.count,
-      todayRevenue: todayRevenueRow.total,
-      todayTasks: todayTasksRow.count,
+      totalUsers: totalUsers || 0,
+      totalRevenue,
+      totalSpent,
+      totalRefunded,
+      activeTasks: activeTasks || 0,
+      totalTasks: totalTasks || 0,
+      successTasks: successTasks || 0,
+      failedTasks: failedTasks || 0,
+      todayRevenue,
+      todayTasks: todayTasks || 0,
       dailyStats,
       popularModels,
     });

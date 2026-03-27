@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -18,54 +18,73 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const offset = (page - 1) * limit;
 
-    let whereClause = "";
-    const queryParams: unknown[] = [];
+    // Count total
+    let countQuery = supabase
+      .from("users")
+      .select("*", { count: "exact", head: true });
 
     if (search) {
-      whereClause = "WHERE u.user_id LIKE ? OR u.display_name LIKE ?";
-      queryParams.push(`%${search}%`, `%${search}%`);
+      countQuery = countQuery.or(
+        `user_id.ilike.%${search}%,display_name.ilike.%${search}%`
+      );
     }
 
-    // Count total
-    const countRow = db
-      .prepare(
-        `SELECT COUNT(*) as count FROM users u ${whereClause}`
-      )
-      .get(...queryParams) as {
-      count: number;
-    };
+    const { count: total } = await countQuery;
 
-    // Get users with task and transaction counts
-    const users = db
-      .prepare(
-        `SELECT
-          u.*,
-          COALESCE(tc.task_count, 0) as task_count,
-          COALESCE(txc.tx_count, 0) as tx_count
-        FROM users u
-        LEFT JOIN (
-          SELECT user_id, COUNT(*) as task_count
-          FROM tasks
-          GROUP BY user_id
-        ) tc ON u.user_id = tc.user_id
-        LEFT JOIN (
-          SELECT user_id, COUNT(*) as tx_count
-          FROM transactions
-          GROUP BY user_id
-        ) txc ON u.user_id = txc.user_id
-        ${whereClause}
-        ORDER BY u.created_at DESC
-        LIMIT ? OFFSET ?`
-      )
-      .all(...queryParams, limit, offset);
+    // Get users
+    let usersQuery = supabase
+      .from("users")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (search) {
+      usersQuery = usersQuery.or(
+        `user_id.ilike.%${search}%,display_name.ilike.%${search}%`
+      );
+    }
+
+    const { data: users } = await usersQuery;
+
+    // Get task counts and transaction counts per user for the returned users
+    const userIds = (users || []).map((u) => u.user_id);
+
+    let taskCountMap = new Map<string, number>();
+    let txCountMap = new Map<string, number>();
+
+    if (userIds.length > 0) {
+      const { data: taskCounts } = await supabase
+        .from("tasks")
+        .select("user_id")
+        .in("user_id", userIds);
+
+      for (const t of taskCounts || []) {
+        taskCountMap.set(t.user_id, (taskCountMap.get(t.user_id) || 0) + 1);
+      }
+
+      const { data: txCounts } = await supabase
+        .from("transactions")
+        .select("user_id")
+        .in("user_id", userIds);
+
+      for (const t of txCounts || []) {
+        txCountMap.set(t.user_id, (txCountMap.get(t.user_id) || 0) + 1);
+      }
+    }
+
+    const enrichedUsers = (users || []).map((u) => ({
+      ...u,
+      task_count: taskCountMap.get(u.user_id) || 0,
+      tx_count: txCountMap.get(u.user_id) || 0,
+    }));
 
     return NextResponse.json({
-      users,
+      users: enrichedUsers,
       pagination: {
         page,
         limit,
-        total: countRow.count,
-        totalPages: Math.ceil(countRow.count / limit),
+        total: total || 0,
+        totalPages: Math.ceil((total || 0) / limit),
       },
     });
   } catch (error) {
