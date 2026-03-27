@@ -163,23 +163,23 @@ export default function InvoicesPage() {
   }, [fetchInvoices]);
 
   return (
-    <div className="flex flex-col gap-6 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex flex-col gap-4 p-3 sm:gap-6 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">ใบเสร็จ / ใบเสนอราคา</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl font-bold sm:text-2xl">ใบเสร็จ / ใบเสนอราคา</h1>
+          <p className="text-xs text-muted-foreground sm:text-sm">
             จัดการใบเสร็จและใบเสนอราคาทั้งหมด
           </p>
         </div>
-        <Button onClick={() => router.push("/dashboard/invoices/new")}>
+        <Button className="w-full sm:w-auto" onClick={() => router.push("/dashboard/invoices/new")}>
           <Plus className="mr-1.5 h-4 w-4" />
           สร้างใหม่
         </Button>
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         {[
           {
             label: "ทั้งหมด",
@@ -203,53 +203,55 @@ export default function InvoicesPage() {
           },
         ].map((s) => (
           <Card key={s.label}>
-            <CardContent className="px-4 py-3 text-center">
+            <CardContent className="px-3 py-2 text-center sm:px-4 sm:py-3">
               <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
+              <p className={`text-base font-bold sm:text-lg ${s.color}`}>{s.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v ?? "all")}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="สถานะ" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={typeFilter}
-          onValueChange={(v) => setTypeFilter(v ?? "all")}
-        >
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="ประเภท" />
-          </SelectTrigger>
-          <SelectContent>
-            {TYPE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="flex gap-2 sm:gap-3">
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => setStatusFilter(v ?? "all")}
+          >
+            <SelectTrigger className="min-h-[44px] w-full sm:min-h-0 sm:w-[140px]">
+              <SelectValue placeholder="สถานะ" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={typeFilter}
+            onValueChange={(v) => setTypeFilter(v ?? "all")}
+          >
+            <SelectTrigger className="min-h-[44px] w-full sm:min-h-0 sm:w-[150px]">
+              <SelectValue placeholder="ประเภท" />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="ค้นหาลูกค้า / เลขที่..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 w-[220px]"
+            className="min-h-[44px] pl-9 w-full sm:min-h-0 sm:w-[220px]"
           />
         </div>
       </div>
@@ -257,96 +259,99 @@ export default function InvoicesPage() {
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>เลขที่</TableHead>
-                <TableHead>ประเภท</TableHead>
-                <TableHead>ลูกค้า</TableHead>
-                <TableHead className="text-right">ยอดรวม</TableHead>
-                <TableHead>สถานะ</TableHead>
-                <TableHead>วันที่</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          <div className="overflow-x-auto">
+            <Table className="min-w-[640px]">
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-12 text-muted-foreground"
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                      กำลังโหลด...
-                    </div>
-                  </TableCell>
+                  <TableHead>เลขที่</TableHead>
+                  <TableHead>ประเภท</TableHead>
+                  <TableHead>ลูกค้า</TableHead>
+                  <TableHead className="text-right">ยอดรวม</TableHead>
+                  <TableHead>สถานะ</TableHead>
+                  <TableHead>วันที่</TableHead>
                 </TableRow>
-              ) : invoices.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-12 text-muted-foreground"
-                  >
-                    <FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                    ไม่พบรายการ
-                  </TableCell>
-                </TableRow>
-              ) : (
-                invoices.map((inv, i) => (
-                  <TableRow
-                    key={inv.id}
-                    className="cursor-pointer transition-colors"
-                    style={{ animationDelay: `${i * 30}ms` }}
-                    onClick={() =>
-                      router.push(`/dashboard/invoices/${inv.id}`)
-                    }
-                  >
-                    <TableCell className="font-mono text-sm font-medium text-[#D63384]">
-                      {inv.invoice_number}
-                    </TableCell>
-                    <TableCell>{typeBadge(inv.type)}</TableCell>
-                    <TableCell className="font-medium">
-                      {inv.customer_name}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-medium">
-                      {inv.total.toLocaleString("th-TH", {
-                        minimumFractionDigits: 2,
-                      })}{" "}
-                      <span className="text-xs text-muted-foreground">
-                        THB
-                      </span>
-                    </TableCell>
-                    <TableCell>{statusBadge(inv.status)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(inv.created_at).toLocaleDateString("th-TH", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        กำลังโหลด...
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : invoices.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      <FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />
+                      ไม่พบรายการ
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  invoices.map((inv, i) => (
+                    <TableRow
+                      key={inv.id}
+                      className="cursor-pointer transition-colors"
+                      style={{ animationDelay: `${i * 30}ms` }}
+                      onClick={() =>
+                        router.push(`/dashboard/invoices/${inv.id}`)
+                      }
+                    >
+                      <TableCell className="font-mono text-xs font-medium text-[#D63384] sm:text-sm">
+                        {inv.invoice_number}
+                      </TableCell>
+                      <TableCell>{typeBadge(inv.type)}</TableCell>
+                      <TableCell className="font-medium text-sm">
+                        {inv.customer_name}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm font-medium">
+                        {inv.total.toLocaleString("th-TH", {
+                          minimumFractionDigits: 2,
+                        })}{" "}
+                        <span className="text-xs text-muted-foreground">
+                          THB
+                        </span>
+                      </TableCell>
+                      <TableCell>{statusBadge(inv.status)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground sm:text-sm">
+                        {new Date(inv.created_at).toLocaleDateString("th-TH", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+          <p className="text-xs text-muted-foreground sm:text-sm">
             ทั้งหมด {pagination.total.toLocaleString()} รายการ
           </p>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
+              className="min-h-[44px] sm:min-h-0"
               disabled={pagination.page <= 1}
               onClick={() => fetchInvoices(pagination.page - 1)}
             >
               <ArrowLeft className="mr-1 h-4 w-4" />
-              ก่อนหน้า
+              <span className="hidden sm:inline">ก่อนหน้า</span>
             </Button>
             <span className="text-sm text-muted-foreground">
               {pagination.page} / {pagination.totalPages}
@@ -354,10 +359,11 @@ export default function InvoicesPage() {
             <Button
               variant="outline"
               size="sm"
+              className="min-h-[44px] sm:min-h-0"
               disabled={pagination.page >= pagination.totalPages}
               onClick={() => fetchInvoices(pagination.page + 1)}
             >
-              ถัดไป
+              <span className="hidden sm:inline">ถัดไป</span>
               <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>

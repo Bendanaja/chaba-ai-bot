@@ -168,7 +168,7 @@ export default function UsersPage() {
       </div>
 
       {/* Search bar */}
-      <div className="relative max-w-md">
+      <div className="relative w-full sm:max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="ค้นหาผู้ใช้..."
@@ -183,7 +183,7 @@ export default function UsersPage() {
         className="card-enter rounded-2xl bg-white shadow-sm overflow-hidden"
         style={{ animationDelay: "0.15s" }}
       >
-        <div className="flex items-center justify-between border-b bg-muted/30 px-6 py-4">
+        <div className="flex items-center justify-between border-b bg-muted/30 px-4 sm:px-6 py-3 sm:py-4">
           <div>
             <h3 className="flex items-center gap-2 font-semibold text-base">
               <UserCircle className="h-4 w-4 text-chaba-pink" />
@@ -195,6 +195,7 @@ export default function UsersPage() {
           </div>
         </div>
 
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/20 hover:bg-muted/20">
@@ -232,8 +233,9 @@ export default function UsersPage() {
                   key={user.user_id}
                   className="group transition-colors hover:bg-chaba-pink/[0.03]"
                 >
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {user.user_id.slice(0, 10)}...
+                  <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                    <span className="sm:hidden">{user.user_id.slice(0, 6)}...</span>
+                    <span className="hidden sm:inline">{user.user_id.slice(0, 10)}...</span>
                   </TableCell>
                   <TableCell className="font-medium">
                     {user.display_name || (
@@ -353,12 +355,13 @@ export default function UsersPage() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             หน้า {pagination.page} จาก {pagination.totalPages} (
             {pagination.total.toLocaleString()} รายการ)
           </p>

@@ -332,7 +332,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
         <p className="text-sm text-muted-foreground">ภาพรวมระบบ Chaba AI</p>
       </div>
 
@@ -341,7 +341,7 @@ export default function DashboardPage() {
         {statCards.map((card) => (
           <div
             key={card.title}
-            className="card-enter relative overflow-hidden rounded-2xl bg-white p-5 shadow-sm"
+            className="card-enter relative overflow-hidden rounded-2xl bg-white p-4 sm:p-5 shadow-sm"
           >
             <div
               className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${card.gradient}`}
@@ -356,7 +356,7 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground truncate">
                   {card.title}
                 </p>
-                <p className="text-xl font-bold tracking-tight truncate">
+                <p className="text-lg sm:text-xl font-bold tracking-tight truncate">
                   <CountUpNumber value={card.value} suffix={card.suffix} />
                 </p>
               </div>
@@ -368,13 +368,13 @@ export default function DashboardPage() {
       {/* ── Main 3-column grid ── */}
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         {/* ═══ LEFT COLUMN (spans 2) ═══ */}
-        <div className="lg:col-span-2 flex flex-col gap-5">
+        <div className="xl:col-span-2 flex flex-col gap-5">
           {/* ── Large activity card with weekly BarChart ── */}
           <div
-            className="card-enter rounded-2xl bg-white p-6 shadow-sm"
+            className="card-enter rounded-2xl bg-white p-4 sm:p-6 shadow-sm"
             style={{ animationDelay: "0.2s" }}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-chaba-pink" />
                 <h3 className="font-semibold text-base">
@@ -392,7 +392,7 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
-            <div className="h-[260px]">
+            <div className="h-[220px] sm:h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={weeklyData}
@@ -439,22 +439,22 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
             {/* Stats summary row */}
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border/50">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-4 pt-4 border-t border-border/50">
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">รายได้วันนี้</p>
-                <p className="text-lg font-bold text-chaba-pink">
+                <p className="text-base sm:text-lg font-bold text-chaba-pink">
                   <CountUpNumber value={stats.todayRevenue} suffix=" THB" />
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">งานวันนี้</p>
-                <p className="text-lg font-bold text-chaba-purple">
+                <p className="text-base sm:text-lg font-bold text-chaba-purple">
                   <CountUpNumber value={stats.todayTasks} />
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">สำเร็จ / ล้มเหลว</p>
-                <p className="text-lg font-bold">
+                <p className="text-base sm:text-lg font-bold">
                   <span className="text-emerald-600">
                     {stats.successTasks.toLocaleString()}
                   </span>
@@ -471,7 +471,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             {/* Card: การสร้างของฉัน (recent creations) */}
             <div
-              className="card-enter rounded-2xl bg-white p-5 shadow-sm"
+              className="card-enter rounded-2xl bg-white p-4 sm:p-5 shadow-sm"
               style={{ animationDelay: "0.3s" }}
             >
               <div className="flex items-center gap-2 mb-4">
@@ -507,7 +507,7 @@ export default function DashboardPage() {
 
             {/* Card: งาน (tasks) with progress ring */}
             <div
-              className="card-enter rounded-2xl bg-white p-5 shadow-sm"
+              className="card-enter rounded-2xl bg-white p-4 sm:p-5 shadow-sm"
               style={{ animationDelay: "0.35s" }}
             >
               <div className="flex items-center gap-2 mb-4">
@@ -553,7 +553,7 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-5">
           {/* Calendar widget */}
           <div
-            className="card-enter rounded-2xl bg-white p-5 shadow-sm"
+            className="card-enter rounded-2xl bg-white p-4 sm:p-5 shadow-sm"
             style={{ animationDelay: "0.25s" }}
           >
             <div className="flex items-center gap-2 mb-3">
@@ -565,7 +565,7 @@ export default function DashboardPage() {
 
           {/* Upcoming section */}
           <div
-            className="card-enter rounded-2xl bg-white p-5 shadow-sm"
+            className="card-enter rounded-2xl bg-white p-4 sm:p-5 shadow-sm"
             style={{ animationDelay: "0.3s" }}
           >
             <div className="flex items-center gap-2 mb-3">
@@ -599,7 +599,7 @@ export default function DashboardPage() {
             className="card-enter rounded-2xl overflow-hidden shadow-sm"
             style={{ animationDelay: "0.35s" }}
           >
-            <div className="relative bg-gradient-to-br from-chaba-pink via-chaba-purple to-chaba-gold p-5 text-white">
+            <div className="relative bg-gradient-to-br from-chaba-pink via-chaba-purple to-chaba-gold p-4 sm:p-5 text-white">
               <div className="absolute top-3 right-3 opacity-20">
                 <Gift className="h-16 w-16" />
               </div>

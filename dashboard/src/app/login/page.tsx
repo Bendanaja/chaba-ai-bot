@@ -79,7 +79,7 @@ export default function LoginPage() {
 
       {/* Login card with glassmorphism */}
       <div
-        className={`relative z-10 w-full max-w-sm rounded-2xl border-0 shadow-2xl transition-all duration-700 ${
+        className={`relative z-10 w-full max-w-[calc(100%-2rem)] sm:max-w-sm md:max-w-md rounded-2xl border-0 shadow-2xl transition-all duration-700 ${
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         }`}
         style={{
@@ -89,8 +89,8 @@ export default function LoginPage() {
         }}
       >
         {/* Header with mascot */}
-        <div className="flex flex-col items-center gap-3 px-6 pb-2 pt-8">
-          <div className="relative h-24 w-24 overflow-hidden rounded-full avatar-glow">
+        <div className="flex flex-col items-center gap-3 px-4 sm:px-6 pb-2 pt-6 sm:pt-8">
+          <div className="relative h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-full avatar-glow">
             <Image
               src="/chaba-mascot.jpg"
               alt="Chaba Mascot"
@@ -100,7 +100,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight gold-shimmer">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight gold-shimmer">
               Chaba AI
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
@@ -110,7 +110,7 @@ export default function LoginPage() {
         </div>
 
         {/* Form */}
-        <div className="px-6 pb-6">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="password">Password</Label>
@@ -147,7 +147,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full btn-chaba text-white h-9 text-sm font-medium"
+              className="w-full btn-chaba text-white h-11 sm:h-9 text-sm font-medium"
             >
               {loading ? (
                 <>

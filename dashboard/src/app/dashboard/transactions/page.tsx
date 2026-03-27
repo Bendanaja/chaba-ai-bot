@@ -163,30 +163,30 @@ export default function TransactionsPage() {
   }, [fetchTransactions]);
 
   return (
-    <div className="flex flex-col gap-6 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex flex-col gap-4 p-3 sm:gap-6 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#D63384]/10 to-[#C8A951]/10">
           <Wallet className="h-5 w-5 text-[#D63384]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">รายการธุรกรรม</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl font-bold sm:text-2xl">รายการธุรกรรม</h1>
+          <p className="text-xs text-muted-foreground sm:text-sm">
             ประวัติการเติมเงิน ใช้จ่าย และคืนเงิน
           </p>
         </div>
       </div>
 
       {/* Summary stat cards */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
         <Card>
-          <CardContent className="flex items-center gap-3 px-4 py-3">
+          <CardContent className="flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3">
             <div className="rounded-lg bg-emerald-100 p-2 dark:bg-emerald-900/30">
               <ArrowUpCircle className="h-4 w-4 text-emerald-600" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">เติมเงิน</p>
-              <p className="text-sm font-bold text-emerald-600">
+              <p className="text-xs font-bold text-emerald-600 sm:text-sm">
                 +
                 {transactions
                   .filter((t) => t.type === "topup")
@@ -198,13 +198,13 @@ export default function TransactionsPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 px-4 py-3">
+          <CardContent className="flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3">
             <div className="rounded-lg bg-[#D63384]/10 p-2">
               <ArrowDownCircle className="h-4 w-4 text-[#D63384]" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">ใช้จ่าย</p>
-              <p className="text-sm font-bold text-[#D63384]">
+              <p className="text-xs font-bold text-[#D63384] sm:text-sm">
                 -
                 {transactions
                   .filter((t) => t.type === "spend")
@@ -216,13 +216,13 @@ export default function TransactionsPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 px-4 py-3">
+          <CardContent className="flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3">
             <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
               <RotateCcw className="h-4 w-4 text-blue-600" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">คืนเงิน</p>
-              <p className="text-sm font-bold text-blue-600">
+              <p className="text-xs font-bold text-blue-600 sm:text-sm">
                 +
                 {transactions
                   .filter((t) => t.type === "refund")
@@ -236,12 +236,12 @@ export default function TransactionsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <Select
           value={typeFilter}
           onValueChange={(v) => setTypeFilter(v ?? "all")}
         >
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="min-h-[44px] w-full sm:min-h-0 sm:w-[140px]">
             <SelectValue placeholder="ประเภท" />
           </SelectTrigger>
           <SelectContent>
@@ -258,10 +258,10 @@ export default function TransactionsPage() {
             placeholder="ค้นหา User ID..."
             value={userIdSearch}
             onChange={(e) => setUserIdSearch(e.target.value)}
-            className="pl-9 w-[220px]"
+            className="min-h-[44px] pl-9 w-full sm:min-h-0 sm:w-[220px]"
           />
         </div>
-        <div className="ml-auto text-sm text-muted-foreground">
+        <div className="text-xs text-muted-foreground sm:ml-auto sm:text-sm">
           {pagination.total.toLocaleString()} รายการ
         </div>
       </div>
@@ -269,112 +269,115 @@ export default function TransactionsPage() {
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[60px]">ID</TableHead>
-                <TableHead>ผู้ใช้</TableHead>
-                <TableHead>ประเภท</TableHead>
-                <TableHead className="text-right">จำนวน</TableHead>
-                <TableHead>รายละเอียด</TableHead>
-                <TableHead>วันที่</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          <div className="overflow-x-auto">
+            <Table className="min-w-[640px]">
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-12 text-muted-foreground"
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                      กำลังโหลด...
-                    </div>
-                  </TableCell>
+                  <TableHead className="w-[60px]">ID</TableHead>
+                  <TableHead>ผู้ใช้</TableHead>
+                  <TableHead>ประเภท</TableHead>
+                  <TableHead className="text-right">จำนวน</TableHead>
+                  <TableHead>รายละเอียด</TableHead>
+                  <TableHead>วันที่</TableHead>
                 </TableRow>
-              ) : transactions.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-12 text-muted-foreground"
-                  >
-                    <Wallet className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                    ไม่พบรายการ
-                  </TableCell>
-                </TableRow>
-              ) : (
-                transactions.map((tx, i) => (
-                  <TableRow
-                    key={tx.id}
-                    className="group transition-colors"
-                    style={{ animationDelay: `${i * 20}ms` }}
-                  >
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {tx.id}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                          {(tx.display_name || "?").charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">
-                            {tx.display_name || "-"}
-                          </span>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {tx.user_id.slice(0, 10)}...
-                          </span>
-                        </div>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        กำลังโหลด...
                       </div>
                     </TableCell>
-                    <TableCell>{typeBadge(tx.type)}</TableCell>
-                    <TableCell className="text-right">
-                      {amountDisplay(tx.type, tx.amount)}
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        THB
-                      </span>
-                    </TableCell>
-                    <TableCell className="max-w-[220px]">
-                      <span className="truncate block text-xs text-muted-foreground">
-                        {tx.description || "-"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleDateString("th-TH", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                  </TableRow>
+                ) : transactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      <Wallet className="mx-auto mb-2 h-8 w-8 opacity-40" />
+                      ไม่พบรายการ
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  transactions.map((tx, i) => (
+                    <TableRow
+                      key={tx.id}
+                      className="group transition-colors"
+                      style={{ animationDelay: `${i * 20}ms` }}
+                    >
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {tx.id}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                            {(tx.display_name || "?").charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">
+                              {tx.display_name || "-"}
+                            </span>
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {tx.user_id.slice(0, 10)}...
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{typeBadge(tx.type)}</TableCell>
+                      <TableCell className="text-right">
+                        {amountDisplay(tx.type, tx.amount)}
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          THB
+                        </span>
+                      </TableCell>
+                      <TableCell className="max-w-[220px]">
+                        <span className="truncate block text-xs text-muted-foreground">
+                          {tx.description || "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(tx.created_at).toLocaleDateString("th-TH", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+          <p className="text-xs text-muted-foreground sm:text-sm">
             หน้า {pagination.page} จาก {pagination.totalPages} (
             {pagination.total.toLocaleString()} รายการ)
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
+              className="min-h-[44px] sm:min-h-0"
               disabled={pagination.page <= 1}
               onClick={() => fetchTransactions(pagination.page - 1)}
             >
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              ก่อนหน้า
+              <ArrowLeft className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">ก่อนหน้า</span>
             </Button>
-            <div className="flex items-center gap-1">
+            <div className="hidden items-center gap-1 sm:flex">
               {Array.from(
                 { length: Math.min(5, pagination.totalPages) },
                 (_, i) => {
@@ -403,14 +406,18 @@ export default function TransactionsPage() {
                 }
               )}
             </div>
+            <span className="text-xs text-muted-foreground sm:hidden">
+              {pagination.page} / {pagination.totalPages}
+            </span>
             <Button
               variant="outline"
               size="sm"
+              className="min-h-[44px] sm:min-h-0"
               disabled={pagination.page >= pagination.totalPages}
               onClick={() => fetchTransactions(pagination.page + 1)}
             >
-              ถัดไป
-              <ArrowRight className="ml-1 h-4 w-4" />
+              <span className="hidden sm:inline">ถัดไป</span>
+              <ArrowRight className="h-4 w-4 sm:ml-1" />
             </Button>
           </div>
         </div>
