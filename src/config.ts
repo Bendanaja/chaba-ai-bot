@@ -19,5 +19,8 @@ export const config = {
     baseUrl: "https://api.kie.ai",
     fileUploadUrl: "https://kieai.redpandaai.co",
   },
+  payment: {
+    promptpay: process.env["PROMPTPAY_NUMBER"] || "",
+  },
   port: parseInt(process.env["PORT"] || "3000", 10),
 } as const;

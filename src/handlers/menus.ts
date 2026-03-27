@@ -2,6 +2,7 @@ import type { messagingApi } from "@line/bot-sdk";
 import { getModelsByCategory, type ModelDef } from "../models/kieai-models.js";
 import { config } from "../config.js";
 import type { Invoice } from "../services/database.js";
+import * as dbService from "../services/database.js";
 
 // ==================== Chaba Theme ====================
 const C = {
@@ -19,9 +20,24 @@ const C = {
 
 const MASCOT = `${config.kieai.callbackBaseUrl}/public/chaba-mascot.jpg`;
 
+// ==================== Icon Cache ====================
+
+let iconCache: Record<string, string> | null = null;
+let iconCacheTime = 0;
+
+export async function getIcons(): Promise<Record<string, string>> {
+  if (iconCache && Date.now() - iconCacheTime < 300000) return iconCache;
+  const data = await dbService.getSetting("menu_icons");
+  const result: Record<string, string> = data || {};
+  iconCache = result;
+  iconCacheTime = Date.now();
+  return result;
+}
+
 // ==================== Main Menu ====================
 
-export function buildMainMenu(): messagingApi.FlexMessage {
+export async function buildMainMenu(): Promise<messagingApi.FlexMessage> {
+  const icons = await getIcons();
   return {
     type: "flex",
     altText: "🌺 Chaba AI — เลือกสิ่งที่ต้องการสร้าง",
@@ -81,8 +97,8 @@ export function buildMainMenu(): messagingApi.FlexMessage {
             layout: "horizontal",
             spacing: "sm",
             contents: [
-              mainCatCard("🖼", "รูปภาพ", "3-8 ฿", "image", "#B5246B", "#D63384"),
-              mainCatCard("🎬", "วิดีโอ", "15-22 ฿", "video", "#C0392B", "#E17055"),
+              mainCatCard("🖼", "รูปภาพ", "3-8 ฿", "image", "#B5246B", "#D63384", icons["image"]),
+              mainCatCard("🎬", "วิดีโอ", "15-22 ฿", "video", "#C0392B", "#E17055", icons["video"]),
             ],
           },
           {
@@ -90,8 +106,8 @@ export function buildMainMenu(): messagingApi.FlexMessage {
             layout: "horizontal",
             spacing: "sm",
             contents: [
-              mainCatCard("🎤", "เสียงพูด", "4-5 ฿", "audio", "#0652DD", "#0984E3"),
-              mainCatCard("🎵", "เพลง", "10 ฿", "music", "#4834D4", "#6C5CE7"),
+              mainCatCard("🎤", "เสียงพูด", "4-5 ฿", "audio", "#0652DD", "#0984E3", icons["audio"]),
+              mainCatCard("🎵", "เพลง", "10 ฿", "music", "#4834D4", "#6C5CE7", icons["music"]),
             ],
           },
 
@@ -102,8 +118,8 @@ export function buildMainMenu(): messagingApi.FlexMessage {
             layout: "horizontal",
             spacing: "sm",
             contents: [
-              toolCard("✂️", "ลบพื้นหลัง", "3 ฿", "removebg"),
-              toolCard("🔍", "ขยายรูป", "4 ฿", "upscale"),
+              toolCard("✂️", "ลบพื้นหลัง", "3 ฿", "removebg", icons["removebg"]),
+              toolCard("🔍", "ขยายรูป", "4 ฿", "upscale", icons["upscale"]),
             ],
           },
         ],
@@ -129,13 +145,16 @@ function sectionTitle(text: string): messagingApi.FlexText {
   return { type: "text", text, weight: "bold", size: "sm", color: C.text };
 }
 
-function mainCatCard(emoji: string, label: string, price: string, cat: string, colorStart: string, colorEnd: string): messagingApi.FlexBox {
+function mainCatCard(emoji: string, label: string, price: string, cat: string, colorStart: string, colorEnd: string, iconUrl?: string): messagingApi.FlexBox {
+  const iconContent: messagingApi.FlexComponent = iconUrl
+    ? { type: "image", url: iconUrl, size: "xxl", aspectMode: "fit", aspectRatio: "1:1" }
+    : { type: "text", text: emoji, size: "xxl", align: "center" };
   return {
     type: "box",
     layout: "vertical",
     flex: 1,
     contents: [
-      { type: "text", text: emoji, size: "xxl", align: "center" },
+      iconContent,
       { type: "text", text: label, weight: "bold", size: "lg", align: "center", color: C.white, margin: "sm" },
       { type: "text", text: price, size: "sm", align: "center", color: "#FFFFFFDD" },
     ],
@@ -156,13 +175,16 @@ function mainCatCard(emoji: string, label: string, price: string, cat: string, c
   };
 }
 
-function toolCard(emoji: string, label: string, price: string, cmd: string): messagingApi.FlexBox {
+function toolCard(emoji: string, label: string, price: string, cmd: string, iconUrl?: string): messagingApi.FlexBox {
+  const iconContent: messagingApi.FlexComponent = iconUrl
+    ? { type: "image", url: iconUrl, size: "xl", aspectMode: "fit", aspectRatio: "1:1", flex: 0 }
+    : { type: "text", text: emoji, size: "xl", flex: 0, gravity: "center" };
   return {
     type: "box",
     layout: "horizontal",
     flex: 1,
     contents: [
-      { type: "text", text: emoji, size: "xl", flex: 0, gravity: "center" },
+      iconContent,
       {
         type: "box",
         layout: "vertical",
@@ -755,6 +777,94 @@ export function buildReceiptButton(taskId: string): messagingApi.FlexMessage {
           },
         ],
         paddingAll: "12px",
+        backgroundColor: C.cream,
+      },
+    },
+  };
+}
+
+// ==================== Topup Request Card ====================
+
+export function buildTopupRequestCard(params: {
+  balance: number;
+  needed: number;
+  shortfall: number;
+  promptpay: string;
+  modelLabel: string;
+}): messagingApi.FlexMessage {
+  const promptpaySection: messagingApi.FlexComponent[] = params.promptpay
+    ? [
+        { type: "text", text: "PromptPay 💳", size: "sm", color: C.textSub, margin: "lg" },
+        { type: "text", text: params.promptpay, size: "lg", weight: "bold", color: C.text, margin: "sm" },
+        { type: "text", text: `โอน ${params.shortfall.toFixed(2)} บาท แล้วส่งสลิปมาเลยนะคะ 📸`, size: "sm", color: C.textSub, margin: "md", wrap: true },
+      ]
+    : [
+        { type: "text", text: "ติดต่อ admin เพื่อเติมเงินนะคะ 💕", size: "sm", color: C.textSub, margin: "lg", wrap: true },
+      ];
+
+  return {
+    type: "flex",
+    altText: `🌸 เติมเงินก่อนนะคะ~ ขาดอีก ${params.shortfall.toFixed(2)} บาท`,
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: "🌸 เติมเงินก่อนนะคะ~", weight: "bold", size: "lg", color: C.white },
+        ],
+        paddingAll: "16px",
+        background: {
+          type: "linearGradient",
+          angle: "135deg",
+          startColor: "#D63384",
+          endColor: "#6C5CE7",
+        },
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          // Balance row
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "💰 ยอดปัจจุบัน", size: "sm", color: C.textSub, flex: 3 },
+              { type: "text", text: `${params.balance.toFixed(2)} บาท`, size: "sm", color: C.text, flex: 3, align: "end" },
+            ],
+            paddingTop: "8px",
+            paddingBottom: "8px",
+          },
+          // Price row
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: `💸 ราคา (${params.modelLabel})`, size: "sm", color: C.textSub, flex: 3, wrap: true },
+              { type: "text", text: `${params.needed.toFixed(2)} บาท`, size: "sm", color: C.text, flex: 3, align: "end" },
+            ],
+            paddingTop: "8px",
+            paddingBottom: "8px",
+          },
+          // Shortfall row
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "❗ ขาดอีก", size: "md", color: C.pink, flex: 3, weight: "bold" },
+              { type: "text", text: `${params.shortfall.toFixed(2)} บาท`, size: "md", color: C.pink, flex: 3, align: "end", weight: "bold" },
+            ],
+            paddingTop: "8px",
+            paddingBottom: "8px",
+          },
+          // Separator
+          { type: "separator", color: "#E8E8F0", margin: "md" },
+          // PromptPay or contact admin section
+          ...promptpaySection,
+        ],
+        paddingAll: "16px",
         backgroundColor: C.cream,
       },
     },

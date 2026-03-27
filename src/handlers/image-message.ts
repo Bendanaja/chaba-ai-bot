@@ -4,6 +4,7 @@ import * as kieai from "../services/kieai.js";
 import * as dbService from "../services/database.js";
 import { getModelById } from "../models/kieai-models.js";
 import {
+  getPendingTopup,
   getPendingCommand,
   clearPendingCommand,
 } from "./text-message.js";
@@ -24,6 +25,23 @@ export async function handleImageMessage(
   const session = getSession(userId);
   const pending = getPendingCommand(userId);
   clearPendingCommand(userId);
+
+  // Slip detection: if user sends image with no active image command but has pending topup
+  if (!session && !pending) {
+    const topupPending = getPendingTopup(userId);
+    if (topupPending) {
+      const adminIds = (process.env["ADMIN_USER_IDS"] || "").split(",").filter(Boolean);
+      const pendingModel = getModelById(topupPending.modelId);
+      for (const adminId of adminIds) {
+        await pushText(
+          adminId,
+          `📸 สลิปโอนเงินจากลูกค้านะคะ!\n\n👤 LINE ID: ${userId}\n💸 ขาดอีก: ${topupPending.shortfall.toFixed(2)} บาท\n🎨 รายการ: ${pendingModel?.label || topupPending.modelId}\n\nอนุมัติด้วย:\n/topup ${Math.ceil(topupPending.shortfall)} ${userId}`
+        );
+      }
+      await replyText(replyToken, `📸 ส่งสลิปให้ admin แล้วนะคะ รอแป๊บนึงนะ~ 💕\nหลังจาก admin อนุมัติ น้องชบาจะสร้างให้อัตโนมัติเลยค่า!`);
+      return;
+    }
+  }
 
   let modelId: string;
   let prompt: string | undefined;
@@ -70,7 +88,7 @@ export async function handleImageMessage(
   if (balance < model.creditCost) {
     await replyText(
       replyToken,
-      `Not enough balance.\nRequired: ${model.creditCost} THB\nBalance: ${balance.toFixed(2)} THB\n\nUse /topup <amount> to top up.`
+      `🪙 เงินไม่พอค่าา~\nต้องการ ${model.creditCost} บาท แต่คงเหลือ ${balance.toFixed(2)} บาทเองเลย\nเติมเงินก่อนนะคะ 💕`
     );
     return;
   }
@@ -83,13 +101,13 @@ export async function handleImageMessage(
   );
 
   if (!spent) {
-    await replyText(replyToken, "Payment failed. Please try again.");
+    await replyText(replyToken, "😅 หักเงินไม่ผ่านค่ะ ลองใหม่อีกทีนะคะ~");
     return;
   }
 
   await replyText(
     replyToken,
-    `Processing with ${model.label}... (-${model.creditCost} THB)`
+    `🌸 น้องชบากำลังประมวลผลรูปให้อยู่นะคะ~\n✨ ${model.label}\n💸 หักไป ${model.creditCost} บาท รอแป๊บนึงน้า!`
   );
 
   try {
@@ -140,7 +158,7 @@ export async function handleImageMessage(
     await dbService.refund(userId, model.creditCost, "Refund: image task failed");
     await pushText(
       userId,
-      `Processing failed. ${model.creditCost} THB refunded.`
+      `😢 ประมวลผลรูปไม่สำเร็จเลยค่ะ คืนเงิน ${model.creditCost} บาทให้แล้วนะคะ~`
     );
   }
 }

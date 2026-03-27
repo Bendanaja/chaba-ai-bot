@@ -39,6 +39,32 @@ export function clearPendingCommand(userId: string): void {
   pendingCommands.delete(userId);
 }
 
+// Pending topups: user tried to generate but had insufficient balance
+interface PendingTopup {
+  modelId: string;
+  prompt: string;
+  extraInput: Record<string, unknown>;
+  shortfall: number;
+  expiresAt: number;
+}
+const pendingTopups = new Map<string, PendingTopup>();
+const TOPUP_TTL = 30 * 60 * 1000; // 30 minutes
+
+export function getPendingTopup(userId: string): PendingTopup | undefined {
+  const p = pendingTopups.get(userId);
+  if (!p) return undefined;
+  if (Date.now() > p.expiresAt) { pendingTopups.delete(userId); return undefined; }
+  return p;
+}
+
+export function setPendingTopup(userId: string, data: Omit<PendingTopup, "expiresAt">): void {
+  pendingTopups.set(userId, { ...data, expiresAt: Date.now() + TOPUP_TTL });
+}
+
+export function clearPendingTopup(userId: string): void {
+  pendingTopups.delete(userId);
+}
+
 export async function handleTextMessage(
   event: webhook.MessageEvent & { message: webhook.TextMessageContent }
 ): Promise<void> {
@@ -122,6 +148,16 @@ export async function handleTextMessage(
           replyToken,
           `Top up +${amount} THB\nUser: ${targetUserId === userId ? "you" : targetUserId}\nBalance: ${newBalance.toFixed(2)} THB`
         );
+        // Auto-generate if target user has a pending topup request
+        const pending = getPendingTopup(targetUserId);
+        if (pending) {
+          const pendingModel = getModelById(pending.modelId);
+          if (pendingModel && newBalance >= pendingModel.creditCost) {
+            clearPendingTopup(targetUserId);
+            await pushText(targetUserId, `✅ เติมเงินแล้วนะคะ! กำลังสร้าง ${pendingModel.label} ให้เลยเลย~ 🌸`);
+            await executeGenerationForUser(targetUserId, pendingModel, pending.prompt, pending.extraInput);
+          }
+        }
         return;
       }
 
@@ -461,10 +497,22 @@ export async function executeGeneration(
 ): Promise<void> {
   const balance = await dbService.getBalance(userId);
   if (balance < model.creditCost) {
-    await replyText(
-      replyToken,
-      `🪙 เงินไม่พอค่าา~\nต้องการ ${model.creditCost} บาท แต่คงเหลือแค่ ${balance.toFixed(2)} บาทเองเลย\n\nเติมเงินก่อนนะคะ 💕`
-    );
+    // Store pending generation for auto-run after topup
+    setPendingTopup(userId, {
+      modelId: model.id,
+      prompt,
+      extraInput,
+      shortfall: model.creditCost - balance,
+    });
+    const { buildTopupRequestCard } = await import("./menus.js");
+    const { config } = await import("../config.js");
+    await replyMessage(replyToken, buildTopupRequestCard({
+      balance,
+      needed: model.creditCost,
+      shortfall: model.creditCost - balance,
+      promptpay: config.payment.promptpay,
+      modelLabel: model.label,
+    }));
     return;
   }
 
@@ -495,5 +543,30 @@ export async function executeGeneration(
       userId,
       `😢 สร้างไม่สำเร็จเลยค่ะ คืนเงิน ${model.creditCost} บาทให้แล้วนะคะ~`
     );
+  }
+}
+
+async function executeGenerationForUser(
+  userId: string,
+  model: { id: string; label: string; creditCost: number; apiType: string },
+  prompt: string,
+  extraInput: Record<string, unknown>
+): Promise<void> {
+  const balance = await dbService.getBalance(userId);
+  if (balance < model.creditCost) return;
+
+  const spent = await dbService.spend(userId, model.creditCost, `${model.label}: ${prompt.slice(0, 50)}`);
+  if (!spent) return;
+
+  await pushText(userId, `🌸 น้องชบากำลังสร้างให้อยู่นะคะ~\n✨ ${model.label}\n💸 หักไป ${model.creditCost} บาท รอแป๊บนึงน้า!`);
+
+  try {
+    const input = { prompt, ...extraInput };
+    const { taskId, apiType } = await kieai.createTask(model.id, input);
+    await dbService.saveTask(taskId, userId, model.id, apiType, prompt);
+  } catch (err) {
+    console.error("Auto-generate error:", err);
+    await dbService.refund(userId, model.creditCost, "Refund: auto-generate failed");
+    await pushText(userId, `😢 สร้างไม่สำเร็จเลยค่ะ คืนเงิน ${model.creditCost} บาทให้แล้วนะคะ~`);
   }
 }
