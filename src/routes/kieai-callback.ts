@@ -38,11 +38,14 @@ export async function kieaiCallbackHandler(
       return;
     }
 
-    // Suno sends intermediate callbacks (callbackType: "text") before audio is ready.
-    // Skip these early callbacks — only process "first", "complete", or error.
+    // Suno sends intermediate callbacks before all tracks are ready:
+    //   "text"  — lyrics generated, no audio yet
+    //   "first" — first track ready, second still processing
+    //   "complete" — all tracks ready (what we want)
+    // Skip text/first to avoid marking task done early and missing the 2nd track.
     const callbackType = body.data?.callbackType;
-    if (task.api_type === "suno" && callbackType === "text") {
-      console.log("Suno text callback (lyrics only) — skipping, waiting for audio");
+    if (task.api_type === "suno" && (callbackType === "text" || callbackType === "first")) {
+      console.log(`Suno ${callbackType} callback — skipping, waiting for complete`);
       return;
     }
 
